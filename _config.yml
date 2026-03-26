@@ -1,7 +1,7 @@
 title: dilip # name of the site
 author: dilip gona # name of site's author
 email: dilipgona@gmail.com # email of site's author
-url: https://jalexine.github.io # root address of the site
+url: https://rosinantie.github.io # root address of the site
 baseurl: "" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
 description: > 
   <p> 
