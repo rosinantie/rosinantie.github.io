@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: "en" }}">
+  {%- include head.html -%}
+  <body a="{{ site.theme_config.appearance | default: "auto" }}">
+    <main class="page-content" aria-label="Content">
+      <div class="w">
+
+        {{ content }}
+      </div>
+    </main>
+
+    {%-if site.goat_counter and jekyll.environment == "production"-%}
+      {%-include goat_counter.html-%}
+    {%-endif-%}
+
+    {% if page.custom_js %}
+      {% for js_file in page.custom_js %}
+        <script type="text/javascript" src="{{ site.baseurl }}/assets/js/{{ js_file }}.js"></script>
+      {% endfor %}
+    {% endif %}
+
+    <!-- Quote at the bottom -->
+    <style>
+      @font-face {
+        font-family: 'Voidsproof';
+        src: url('{{ site.baseurl }}/assets/fonts/VOIDSPROOF-FREE DEMO/VOIDSPROOF - FREE DEMO VERSION.ttf') format('truetype');
+      }
+      .bottom-quote {
+        font-family: 'Voidsproof', sans-serif;
+        text-align: center;
+        margin: 2rem auto;
+        font-size: 1.8rem;
+      }
+    </style>
+    <p class="bottom-quote">"Tutto passa"</p>
+
+
+  <style>
+    .copy-btn {
+      position: absolute;
+      top: 0.4rem;
+      right: 0.4rem;
+      background: transparent;
+      border: 1px solid currentColor;
+      color: inherit;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.4rem;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    pre:hover .copy-btn {
+      opacity: 1;
+    }
+  </style>
+  <script src="{{ site.baseurl }}/assets/js/copy-code.js"></script>
+  </body>
+</html>

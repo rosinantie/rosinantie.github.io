@@ -1,0 +1,39 @@
+# For documentation on this file, see:
+# https://github.com/riggraz/no-style-please#customize-the-menu
+ 
+entries:
+  - title: <b>tech</b>
+    post_list:
+      category: tech
+      limit: 3
+      show_more: true
+      show_more_text: see more...
+      show_more_url: tech-archive.html
+
+  - title: <b>cooking</b>
+    post_list:
+      category: cooking
+      limit: 3
+      show_more: true
+      show_more_text: see more...
+      show_more_url: cooking-archive.html
+
+  - title: <b>place</b>
+    post_list:
+      category: place
+      limit: 3
+      show_more: true
+      show_more_text: see more...
+      show_more_url: place-archive.html
+
+  - title: <b>& more</b>
+    entries:
+      - title: all archive's ... >
+        url: archive.html
+
+  # - title: kategori-1
+  #   post_list:
+  #     category: example2
+  #     show_more: true
+  #     show_more_text: See more posts...
+  #     show_more_url: example2-archive.html

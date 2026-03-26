@@ -1,0 +1,22 @@
+---
+layout: default
+---
+{%- include logo.html size=210 -%}
+<header>
+  <h1 style="line-height: 1;">{{ site.title }}<br><span style="font-family: serif; font-size: 0.8em;">திலிப்</span></h1>
+  {%-if site.theme_config.show_description-%}
+    <p>{{ site.description }}</p>
+  {%-endif-%}
+
+</header>
+
+{%-include menu_item.html collection=site.data.menu.entries-%}
+
+{{ content }}
+
+<div style="text-align:right; padding-right:2rem; margin-bottom:0.5rem;">
+  <a href="{{ site.data.profile.linkedin }}" style="margin-right:0.5rem;">profile</a>
+  <a href="{{ site.data.profile.github }}" style="margin-right:0.5rem;">my code</a>
+  <a href="{{ site.data.profile.resume }}" style="margin-right:0.5rem;">on paper</a>
+  <a href="mailto:{{ site.data.profile.email }}">hire me</a>
+</div>
