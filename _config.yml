@@ -1,49 +1,16 @@
-title: dilip # name of the site
-author: dilip gona # name of site's author
+title: தி லீ ப் # name of the site
+author: திலீப் கோனா # name of site's author
 email: dilipgona@gmail.com # email of site's author
 url: https://rosinantie.github.io # root address of the site
 baseurl: "" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
-description: > 
-  <p> 
-  <span style="color: #FFFFFF; font-size: 1.2em;">keep building ⚙️</span> 
-  <br> 
-  here's my base node on the internet 
-  <br> 
-  i design and ship software, explore systems, and build scalable things 
-  <br> 
-  currently focused on backend, distributed systems, and ai/ml infra 
-  <br> 
-  always down to collaborate on interesting ideas — reach out! 
-  <br><br> 
-  
-  > currently learning and iterating in public 
-  <br><br> 
-  
-  <span style="color: #FFFFFF;"> 
-    <span style="font-size: 40px;">⚡</span> 
-  </span>  
-  <a href="https://github.com/yourusername" style="color: #FFFFFF;">
-    <span style="color: #FFFFFF; font-size:2em; font-weight:700;">
-      explore my code & projects
-    </span> 
-  </a> 
-  <span style="color: #FFFFFF;"> 
-    <span style="font-size: 40px;">⚡</span> 
-  </span> 
-  <br><br> 
-  
-  interests : software engineering, system design, distributed systems, ai/ml, open source, startups, problem solving, minimalism, tech philosophy, building things that matter... 
-  <br><br> 
-  
-  pure dislike : unnecessary complexity, over-engineering, bad ux, pointless meetings, vendor lock-in, slow builds, and subscription overload  
-  <br> 
-  </p>
+description: "Description comes here"
+     
 permalink: /:slug.html
 
 favicon: "icons8-disco-ball-96.png" # name+extension of favicon (which must be put on the root folder)
 # goat_counter: "yoursitename" # put your GoatCounter name if you want to use GoatCounter analytics
 
-remote_theme: riggraz/no-style-please # if you are using GitHub Pages, change it to remote_theme: riggraz/no-style-please
+# remote_theme: riggraz/no-style-please # if you are using GitHub Pages, change it to remote_theme: riggraz/no-style-please
 
 theme_config:
   appearance: "auto" # can be "light", "dark" or "auto"
