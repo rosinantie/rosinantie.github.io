@@ -52,6 +52,15 @@ li { margin: 0.4rem 0; }
   background-color: $bg-color;
 }
 
+@media (max-width: 600px) {
+  body { font-size: 15px; }
+  .w { padding: 0.5em 1rem; }
+  .site-title { font-size: 22pt; letter-spacing: 1pt; }
+  h2, h3, h4, h5, h6 { margin-top: 2rem; }
+  ul { padding-left: 1.2rem; }
+  ul ul { padding-left: 1rem; }
+}
+
 hr {
   text-align: center;
   border: 0;

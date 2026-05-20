@@ -3,7 +3,7 @@ layout: default
 ---
 {%- include logo.html size=210 -%}
 <header>
-  <h1 style="line-height: 1;">{{ site.title }}<br><span style="font-family: serif; font-size: 0.8em;">D ì <span style="position: relative; display: inline-block;">l<span aria-hidden="true" style="position: absolute; left: 100%; transform: translateX(-50%) rotate(-18deg); top: 1.6em; font-size: 0.75em; line-height: 1; letter-spacing: -0.1em;">⌣</span></span> í p</span></h1>
+  <h1 style="line-height: 1; font-size: clamp(1.6rem, 7vw, 2.6rem); margin: 0.6em 0;">{{ site.title }}<br><span style="font-family: serif; font-size: 0.8em;">D ì <span style="position: relative; display: inline-block;">l<span aria-hidden="true" style="position: absolute; left: 100%; transform: translateX(-50%) rotate(-18deg); top: 1.6em; font-size: 0.75em; line-height: 1; letter-spacing: -0.1em;">⌣</span></span> í p</span></h1>
   {%-if site.theme_config.show_description-%}
     <p>{{ site.description }}</p>
   {%-endif-%}
@@ -14,18 +14,27 @@ layout: default
 
 {{ content }}
 
-<div style="text-align:right; padding-right:2rem; margin-bottom:0.5rem;">
-  <a href="{{ site.data.profile.linkedin }}" style="margin-right:0.5rem;">profile</a>
-  <a href="{{ site.data.profile.github }}" style="margin-right:0.5rem;">my code</a>
-  <a href="{{ site.data.profile.resume }}" style="margin-right:0.5rem;">on paper</a>
+<div class="bottom-links">
+  <a href="{{ site.data.profile.linkedin }}">profile</a>
+  <a href="{{ site.data.profile.github }}">my code</a>
+  <a href="{{ site.data.profile.resume }}">on paper</a>
   <a href="mailto:{{ site.data.profile.email }}" class="hire-me-link" aria-label="hire me"><canvas id="hire-me-canvas"></canvas></a>
   <style>
+    .bottom-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.6rem 0.9rem;
+      padding-right: 1rem;
+      margin-bottom: 0.5rem;
+    }
     .hire-me-link {
       display: inline-block;
       vertical-align: middle;
       line-height: 1;
       text-decoration: none;
-      font-size: 1.5em;
+      font-size: 1.25em;
     }
     #hire-me-canvas {
       display: block;
