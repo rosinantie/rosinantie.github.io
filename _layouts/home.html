@@ -18,5 +18,28 @@ layout: default
   <a href="{{ site.data.profile.linkedin }}" style="margin-right:0.5rem;">profile</a>
   <a href="{{ site.data.profile.github }}" style="margin-right:0.5rem;">my code</a>
   <a href="{{ site.data.profile.resume }}" style="margin-right:0.5rem;">on paper</a>
-  <a href="mailto:{{ site.data.profile.email }}">hire me</a>
+  <a href="mailto:{{ site.data.profile.email }}" class="hire-me-link" aria-label="hire me"><canvas id="hire-me-canvas"></canvas></a>
+  <style>
+    .hire-me-link {
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+      text-decoration: none;
+      font-size: 1.5em;
+    }
+    #hire-me-canvas {
+      display: block;
+      width: 4.2em;
+      height: 1.1em;
+      vertical-align: middle;
+      -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 22'><text x='42' y='17' text-anchor='middle' font-family='monospace' font-size='16' font-weight='700' fill='black'>hire me</text></svg>");
+              mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 22'><text x='42' y='17' text-anchor='middle' font-family='monospace' font-size='16' font-weight='700' fill='black'>hire me</text></svg>");
+      -webkit-mask-size: 100% 100%;
+              mask-size: 100% 100%;
+      -webkit-mask-repeat: no-repeat;
+              mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+              mask-position: center;
+    }
+  </style>
 </div>

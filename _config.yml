@@ -3,8 +3,7 @@ author: திலீப் கோனா # name of site's author
 email: dilipgona@gmail.com # email of site's author
 url: https://rosinantie.github.io # root address of the site
 baseurl: "" # subpath of the site, e.g. "/blog" (leave it blank "" if you're site shouldn't use a subpath)
-description: "Description comes here"
-     
+description: "Life.exe = [💻 24/7] + [🏋️ 4x] + [🏸 2x] + [🏃 1x] + [2AM]"
 permalink: /:slug.html
 
 favicon: "icons8-disco-ball-96.png" # name+extension of favicon (which must be put on the root folder)
