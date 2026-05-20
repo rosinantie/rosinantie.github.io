@@ -1,19 +1,30 @@
 (function () {
   const canvas = document.getElementById('hire-me-canvas');
   if (!canvas) return;
-  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  const glAttrs = { antialias: true, premultipliedAlpha: false };
+  const gl = canvas.getContext('webgl', glAttrs) || canvas.getContext('experimental-webgl', glAttrs);
   if (!gl) return;
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-    canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    const w = Math.max(1, Math.floor(rect.width * dpr));
+    const h = Math.max(1, Math.floor(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
   }
   resize();
   window.addEventListener('resize', resize);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(resize).observe(canvas);
+  }
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(resize);
+  }
 
   const vsSource = `
     attribute vec2 a_position;
@@ -23,7 +34,11 @@
   `;
 
   const fsSource = `
-    precision mediump float;
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+    #else
+      precision mediump float;
+    #endif
     uniform float iTime;
     uniform vec2 iResolution;
 
