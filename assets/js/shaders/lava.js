@@ -1,5 +1,5 @@
 (function () {
-  const canvas = document.getElementById('hire-me-canvas');
+  const canvas = document.getElementById('shader-canvas');
   if (!canvas) return;
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
   if (!gl) return;
@@ -33,7 +33,6 @@
       return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
     }
 
-    // 2D value noise + fbm for that flowing lava feel
     float hash(vec2 p) {
       return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
     }
@@ -61,11 +60,9 @@
     }
 
     void main() {
-      // Stretch coords so the flow reads nicely inside the wide "hire me" mask
       vec2 uv = gl_FragCoord.xy / iResolution.xy;
-      vec2 p = vec2(uv.x * 3.0, uv.y);
+      vec2 p = vec2(uv.x * (iResolution.x / iResolution.y), uv.y);
 
-      // Domain-warped fbm - molten currents drifting sideways
       vec2 flow = vec2(iTime * 0.18, iTime * 0.05);
       vec2 q = vec2(
         fbm(p * 2.5 + flow),
@@ -77,17 +74,14 @@
       );
       float n = fbm(p * 2.5 + 2.0 * r);
 
-      // Drive hue by the noise so colors slosh through the letters
       float hue = fract(0.62 + n * 0.55 + iTime * 0.04);
       float sat = 0.85 - 0.35 * n;
       float val = 0.55 + 0.85 * n;
       vec3 color = hsv2rgb(vec3(hue, sat, val));
 
-      // Bright veins where the flow piles up - molten highlights
       float veins = smoothstep(0.55, 0.95, n);
       color += vec3(1.0, 0.85, 0.6) * pow(veins, 3.0) * 0.6;
 
-      // Gentle breathing so the whole thing feels alive
       float pulse = 0.9 + 0.1 * sin(iTime * 1.3);
       color *= pulse;
 

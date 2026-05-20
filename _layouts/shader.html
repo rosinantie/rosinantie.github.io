@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{{ page.title | default: "shader" }}</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #shader-canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .shader-back {
+        position: fixed;
+        top: 12px;
+        left: 14px;
+        color: rgba(255, 255, 255, 0.6);
+        font: 12px/1 system-ui, sans-serif;
+        text-decoration: none;
+        mix-blend-mode: difference;
+      }
+      .shader-back:hover { color: #fff; }
+    </style>
+  </head>
+  <body>
+    <canvas id="shader-canvas"></canvas>
+    <a class="shader-back" href="{{ site.baseurl }}/shaders/">← shaders</a>
+    {% if page.custom_js %}
+      {% for js_file in page.custom_js %}
+        <script src="{{ site.baseurl }}/assets/js/{{ js_file }}.js?v={{ site.time | date: '%s' }}"></script>
+      {% endfor %}
+    {% endif %}
+  </body>
+</html>
