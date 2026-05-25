@@ -89,6 +89,106 @@ div.highlighter-rouge code {
   padding: 1rem;
 }
 
+// -------------- Notion-style code blocks -------------- //
+div.highlighter-rouge:not(.language-plaintext),
+figure.highlight {
+  position: relative;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  margin: 1.5rem 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.75rem;
+  background: #161616;
+  border-bottom: 1px solid #2a2a2a;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-size: 0.72rem;
+  user-select: none;
+}
+
+.code-lang {
+  color: #888;
+  text-transform: lowercase;
+  letter-spacing: 0.5px;
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid #333;
+  color: #aaa;
+  font-family: inherit;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.55rem;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+div.highlighter-rouge:hover .copy-btn,
+figure.highlight:hover .copy-btn,
+.copy-btn:focus {
+  opacity: 1;
+}
+
+.copy-btn:hover {
+  background: #2a2a2a;
+  color: #fff;
+  border-color: #444;
+}
+
+div.highlighter-rouge pre,
+figure.highlight pre {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  background: transparent;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+div.highlighter-rouge pre code,
+figure.highlight pre code {
+  background: transparent;
+  color: #e6e6e6;
+  display: block;
+  white-space: pre;
+  padding: 0;
+  overflow-x: visible;
+}
+
+// Rouge syntax tokens — VS Code Dark+ palette
+.highlight {
+  .c, .c1, .cm, .cs, .cd { color: #6a9955; font-style: italic; }     // comments
+  .k, .kd, .kn, .kp, .kr, .kc { color: #c586c0; }                    // keywords
+  .kt { color: #4ec9b0; }                                            // types (int, void, ...)
+  .o, .ow { color: #d4d4d4; }                                        // operators
+  .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sx, .sr, .ss { color: #ce9178; } // strings
+  .mi, .mf, .mh, .mo, .mb, .il { color: #b5cea8; }                   // numbers
+  .nb { color: #4ec9b0; }                                            // builtins
+  .nc, .ne, .nl { color: #4ec9b0; }                                  // class names
+  .nf, .fm { color: #dcdcaa; }                                       // function names
+  .na { color: #9cdcfe; }                                            // attribute names
+  .nd { color: #dcdcaa; }                                            // decorators / annotations
+  .nn { color: #4ec9b0; }                                            // namespace
+  .nt { color: #569cd6; }                                            // tags / cli flags
+  .nv, .vc, .vg, .vi { color: #9cdcfe; }                             // variables
+  .err { color: #f44747; }                                           // errors
+  .p { color: #d4d4d4; }                                             // punctuation
+  .gd { color: #f44747; }                                            // diff deleted
+  .gi { color: #6a9955; }                                            // diff added
+  .gh, .gu { color: #569cd6; }                                       // diff hunk
+}
+// ------------------------------------------------------ //
+
 blockquote {
   font-style: italic;
   border: thin solid black;

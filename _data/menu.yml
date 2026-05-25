@@ -10,21 +10,22 @@ entries:
       show_more_text: see more...
       show_more_url: tech-archive.html
 
-  - title: <b>cooking</b>
-    post_list:
-      category: cooking
-      limit: 3
-      show_more: true
-      show_more_text: see more...
-      show_more_url: cooking-archive.html
-
-  - title: <b>place</b>
-    post_list:
-      category: place
-      limit: 3
-      show_more: true
-      show_more_text: see more...
-      show_more_url: place-archive.html
+  # - title: <b>cooking</b>
+  #   post_list:
+  #     category: cooking
+  #     limit: 3
+  #     show_more: true
+  #     show_more_text: see more...
+  #     show_more_url: cooking-archive.html
+  #
+  # - title: <b>place</b>
+  #   post_list:
+  #     category: place
+  #     limit: 3
+  #     show_more: true
+  #     show_more_text: see more...
+  #     show_more_url: place-archive.html
+  #
 
   - title: <b>& more</b>
     entries:
