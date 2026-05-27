@@ -55,6 +55,11 @@ layout: default
     pointer-events: none;
     background: transparent;
   }
+  .lee-hint {
+    font-size: 0.38em;
+    opacity: 0.55;
+    letter-spacing: 0.04em;
+  }
   @media (prefers-reduced-motion: reduce) {
     .tamil-dot-canvas { animation: none; }
   }
@@ -64,7 +69,7 @@ layout: default
   }
 </style>
 <header>
-  <h1 class="hero-title">தி லீ <span class="tamil-p">ப<canvas class="tamil-dot-canvas" aria-hidden="true"></canvas></span><br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span><span class="dilip-codename">({{ site.data.profile.codename }})</span></h1>
+  <h1 class="hero-title">தி லீ<span class="lee-hint">LEE</span> <span class="tamil-p">ப<canvas class="tamil-dot-canvas" aria-hidden="true"></canvas></span><br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span><span class="dilip-codename">({{ site.data.profile.codename }})</span></h1>
   {%-if site.theme_config.show_description-%}
     <p>{{ site.description | newline_to_br }}</p>
   {%-endif-%}
