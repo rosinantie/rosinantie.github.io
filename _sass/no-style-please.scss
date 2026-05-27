@@ -53,7 +53,8 @@ li { margin: 0.4rem 0; }
 }
 
 @media (max-width: 600px) {
-  body { font-size: 15px; }
+  body { font-size: 14px; }
+  .post-content { font-size: 14px; }
   .w { padding: 0.5em 1rem; }
   .site-title { font-size: 22pt; letter-spacing: 1pt; }
   h2, h3, h4, h5, h6 { margin-top: 2rem; }
