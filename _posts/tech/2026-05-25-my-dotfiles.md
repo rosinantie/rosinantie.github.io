@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "My dotfiles — what's in ~/.dotfiles and why"
-date: 2026-05-25
+date: 2026-03-25
 categories: tech
 ---
 

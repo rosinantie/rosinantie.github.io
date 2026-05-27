@@ -1,3 +1,14 @@
-<a href="{{ site.baseurl }}/" style="display:block;width:fit-content;max-width:100%;margin:2rem auto;">
-  <img src="{{ site.baseurl }}/assets/logo/butterfly-bee.png" alt="logo" width="{{ include.size | default: 120 }}" style="display:block;background:transparent;border:none;box-shadow:none;max-width:min({{ include.size | default: 120 }}px, 38vw);height:auto;">
+{%- assign logo_size = include.size | default: 120 -%}
+<a href="{{ site.baseurl }}/" style="display:block;width:fit-content;max-width:100%;margin:2rem auto;" aria-label="home">
+  <img src="{{ site.baseurl }}/assets/logo/butterfly-bee.png" alt="logo" width="{{ logo_size }}" style="display:block;background:transparent;border:none;box-shadow:none;max-width:min({{ logo_size }}px, 38vw);height:auto;">
 </a>
+
+{%- comment -%}
+Shader version of the logo - kept around in case you want to switch back.
+Uses the butterfly-bee PNG as a mask over a WebGL canvas running the same
+lava/wave shader as the "hire me" link. Swap the <img> above for the block
+below (and uncomment the script) to enable.
+
+<canvas class="logo-canvas" aria-label="logo" style="display:block;width:{{ logo_size }}px;height:{{ logo_size }}px;max-width:min({{ logo_size }}px, 38vw);aspect-ratio:1/1;background:transparent;border:none;box-shadow:none;-webkit-mask-image:url('{{ site.baseurl }}/assets/logo/butterfly-bee.png');mask-image:url('{{ site.baseurl }}/assets/logo/butterfly-bee.png');-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;"></canvas>
+<script defer src="{{ site.baseurl }}/assets/js/logo-shader.js?v={{ site.time | date: '%s' }}"></script>
+{%- endcomment -%}

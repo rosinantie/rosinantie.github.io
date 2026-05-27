@@ -29,15 +29,35 @@ layout: default
     letter-spacing: -0.1em;
     pointer-events: none;
   }
+  .tamil-p {
+    position: relative;
+    display: inline-block;
+  }
+  .tamil-pulli-hidden {
+    color: transparent;
+  }
+  .tamil-dot-canvas {
+    position: absolute;
+    width: 1.2em;
+    height: 1.2em;
+    left: 50%;
+    top: -0.32em;
+    transform: translateX(-50%);
+    pointer-events: none;
+    background: transparent;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tamil-dot-canvas { animation: none; }
+  }
   @media (max-width: 600px) {
     .hero-title { line-height: 1.45; }
     .dilip-smile { top: 0.9em; font-size: 0.7em; }
   }
 </style>
 <header>
-  <h1 class="hero-title">{{ site.title }}<br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span></h1>
+  <h1 class="hero-title">தி லீ <span class="tamil-p">ப<canvas class="tamil-dot-canvas" aria-hidden="true"></canvas></span><br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span></h1>
   {%-if site.theme_config.show_description-%}
-    <p>{{ site.description }}</p>
+    <p>{{ site.description | newline_to_br }}</p>
   {%-endif-%}
 
 </header>
