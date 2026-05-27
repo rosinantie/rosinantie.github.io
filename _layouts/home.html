@@ -12,6 +12,15 @@ layout: default
     font-family: serif;
     font-size: 0.8em;
   }
+  .dilip-codename {
+    font-family: monospace;
+    font-size: 0.45em;
+    opacity: 0.55;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    margin-left: 0.70em;
+  }
+
   .dilip-l {
     position: relative;
     display: inline-block;
@@ -55,7 +64,7 @@ layout: default
   }
 </style>
 <header>
-  <h1 class="hero-title">தி லீ <span class="tamil-p">ப<canvas class="tamil-dot-canvas" aria-hidden="true"></canvas></span><br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span></h1>
+  <h1 class="hero-title">தி லீ <span class="tamil-p">ப<canvas class="tamil-dot-canvas" aria-hidden="true"></canvas></span><br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span><span class="dilip-codename">({{ site.data.profile.codename }})</span></h1>
   {%-if site.theme_config.show_description-%}
     <p>{{ site.description | newline_to_br }}</p>
   {%-endif-%}
