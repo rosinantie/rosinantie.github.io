@@ -36,10 +36,10 @@ That layering is also the map of the whole rest of this post: the **IP Address**
 
 An IP address is how one machine finds another across a network — the **Network floor's** addressing scheme, the postal address of the internet. Routers only ever look at this number to decide where to forward a packet next.
 
-The address you see most is **IPv4**: four numbers `0–255` separated by dots, e.g. `192.168.1.34`. That's 32 bits → about 4.3 billion addresses, which sounded like plenty in the 1980s and ran out in reality (the reason **IPv6** exists — more on that below). An IPv4 address is really two parts glued together:
+The address you see most is **IPv4**: four numbers `0–255` separated by dots, e.g. `192.168.1.24`. That's 32 bits → about 4.3 billion addresses, which sounded like plenty in the 1980s and ran out in reality (the reason **IPv6** exists — more on that below). An IPv4 address is really two parts glued together:
 
 ```
-192.168.1.34 / 24
+192.168.1.24 / 24
 └────┬─────┘ └┬┘
   network    which host
   part       on it
@@ -49,11 +49,11 @@ The `/24` is the **subnet mask** (CIDR notation) — it says "the first 24 bits 
 
 ### Why the mask exists at all
 
-The mask earns its keep by answering one question my machine has to settle for *every single packet*: **is this destination on my network, or somewhere else?** Without the mask, an address like `192.168.1.34` is ambiguous — which part is the network and which part is the device? With `/24`, there's no guessing:
+The mask earns its keep by answering one question my machine has to settle for *every single packet*: **is this destination on my network, or somewhere else?** Without the mask, an address like `192.168.1.24` is ambiguous — which part is the network and which part is the device? With `/24`, there's no guessing:
 
 | Without the mask | With the mask (`/24`) |
 |------------------|------------------------|
-| Sees `192.168.1.34` and is stuck — which part is the network? | Knows: `192.168.1` = network, `.34` = device |
+| Sees `192.168.1.24` and is stuck — which part is the network? | Knows: `192.168.1` = network, `.34` = device |
 | Can't decide: send direct, or hand it to the router? | Decides instantly: same first 3 numbers? → direct. Different? → router. |
 
 It's the old landline problem — without an area code you can't tell a local call from a long-distance one. Same with networks: the mask is what lets the device split any address into **network + device** so it knows whether to talk directly or go through the router. That's the whole purpose.
@@ -96,7 +96,7 @@ On any box, the command to see your own addresses is `ip a` (Linux) or `ifconfig
 ```
 $ ip a
 2: eth0: ... 
-    inet 192.168.1.34/24 ...      ← my IPv4 address + mask
+    inet 192.168.1.24/24 ...      ← my IPv4 address + mask
     inet6 fe80::.../64 ...        ← an IPv6 address (the "noise" that matters in the NAT section below)
 ```
 
@@ -147,7 +147,7 @@ The `-4` flag forces `curl` to use IPv4:
 curl -s -4 ifconfig.me
 ```
 
-This prints `122.167.103.200` — matching the container exactly. 🎯 That's the proof: both machines leave through the **same public IP** (`122.167.103.200`, my home router's address), even though *inside* they're `192.168.1.34` and `172.17.0.2` respectively. You can force the other direction too:
+This prints `122.167.103.200` — matching the container exactly. 🎯 That's the proof: both machines leave through the **same public IP** (`122.167.103.200`, my home router's address), even though *inside* they're `192.168.1.24` and `172.17.0.2` respectively. You can force the other direction too:
 
 ```
 # On the Mac — force IPv6:
@@ -160,11 +160,71 @@ There are actually **three** layers of address in play here, and this experiment
 
 | Layer | Container | Mac | What it is |
 |-------|-----------|-----|------------|
-| **Private internal** | `172.17.0.2` | `192.168.1.34` | inside-only, invisible to the internet |
+| **Private internal** | `172.17.0.2` | `192.168.1.24` | inside-only, invisible to the internet |
 | **Public IPv4** | `122.167.103.200` | `122.167.103.200` | my home's address, old language |
 | **Public IPv6** | *(none)* | `2401:4900:...` | my home's address, new language |
 
-The private addresses are **different** (different internal rooms). The public IPv4 is **identical** (same front door). The Mac just *also* has an IPv6 door the container doesn't. That shared-public-exit-from-different-private-rooms trick is exactly what **NAT** does — the topic this chapter is named for, and what I'll expand next.
+The private addresses are **different** (different internal rooms). The public IPv4 is **identical** (same front door). The Mac just *also* has an IPv6 door the container doesn't. That shared-public-exit-from-different-private-rooms trick is exactly what **NAT** does — the topic this chapter is named for, and what the rest of this chapter explains.
+
+### How NAT actually rewrites the packet
+
+Here's the puzzle that makes the whole thing click. Run `ifconfig en0` on my Mac (or `ip a` on Linux) and the Wi-Fi interface reports:
+
+```
+en0: inet 192.168.1.24 netmask 0xffffff00     ← my local IPv4 (0xffffff00 = /24)
+     ether 36:ef:da:3a:2d:05                   ← the MAC (hardware ID)
+     inet6 fe80::1418:59f8:2acb:a073%en0       ← IPv6 link-local
+```
+
+But open any "what is my IP?" website and it shows something completely different:
+
+```
+27.5.157.32                ← what the website sees
+```
+
+Two different addresses for one laptop — and both are correct. They're just at **different levels** of the network:
+
+```
+            Internet
+               ▲
+          27.5.157.32        ← PUBLIC IP  (assigned by my ISP)
+               ▲
+            Router            ← 192.168.1.1
+               ▲
+        192.168.1.24          ← LOCAL IP  (assigned by my router)
+            Laptop
+```
+
+| | Local IP (`192.168.1.24`) | Public IP (`27.5.157.32`) |
+|---|---|---|
+| Assigned by | my Wi-Fi **router** (DHCP) | my **ISP** |
+| Who can use it | only devices **inside** my home network | the whole **internet** |
+| Where it shows up | `ifconfig` / `ip a` on the device | "what is my IP?" sites, server logs |
+
+**Why doesn't the website see `192.168.1.24`?** Because private addresses are *not routable on the internet*. These ranges are reserved for internal use and reused in millions of homes at once:
+
+```
+10.0.0.0     – 10.255.255.255     (10.x.x.x)
+172.16.0.0   – 172.31.255.255     (172.16–31.x.x)
+192.168.0.0  – 192.168.255.255    (192.168.x.x)
+```
+
+Right now countless laptops worldwide are sitting at `192.168.1.24` — so it's meaningless as a global destination. Before my traffic ever leaves the house, the router fixes this with **NAT** (Network Address Translation): it **rewrites the source address** on the way out.
+
+```
+Packet leaving my laptop:
+   source = 192.168.1.24   ← private, internet can't reply to this
+
+Router applies NAT:
+   source = 27.5.157.32    ← its own public IP
+
+What Google receives:
+   source = 27.5.157.32    ← Google never sees 192.168.1.24
+```
+
+Google replies to `27.5.157.32`; the router remembers which inside device asked and hands the reply back to `192.168.1.24`. (That "remembering" is the **translation table** — I take it apart properly in the **Firewalls & NAT Defense** chapter, where the same mechanic turns out to also block inbound attacks.)
+
+So when I see `192.168.1.24` in the terminal but `27.5.157.32` on a website, nothing is wrong — they're **both my IP**, one for inside the house and one for facing the world. The same `ifconfig` output above also shows two addresses worth recognising on sight, both already covered in the **IP Addresses** chapter: the **loopback** `127.0.0.1` (this machine talking to itself, never leaves the OS) and the interface's **MAC** `36:ef:da:3a:2d:05` (the `ether` line — the hardware ID that the next chapter is all about).
 
 ## MAC Addresses & ARP
 
@@ -176,7 +236,7 @@ Every device on a network carries **two** addresses, and they answer different q
 
 | | MAC address | IP address |
 |---|-------------|------------|
-| Example | `82:4b:d2:f8:aa:1b` | `192.168.1.34` |
+| Example | `82:4b:d2:f8:aa:1b` | `192.168.1.24` |
 | Answers | **WHO** is the device | **WHERE** is the device |
 | Layer | Link (Layer 2) | Network (Layer 3) |
 | Assigned by | Hardware maker (burned in) | Router / DHCP (changes) |
@@ -187,7 +247,7 @@ The big idea: a packet needs **both**. The IP gets it across the internet to *yo
 
 ### The problem ARP solves
 
-Say my laptop (`192.168.1.34`) wants to send something to the router at `192.168.1.1`. It knows the **IP** — but to actually put a frame on the local wire, the Link floor needs a **MAC**, and it doesn't have one yet. A machine can't deliver anything locally with just an IP; it *must* translate IP → MAC first.
+Say my laptop (`192.168.1.24`) wants to send something to the router at `192.168.1.1`. It knows the **IP** — but to actually put a frame on the local wire, the Link floor needs a **MAC**, and it doesn't have one yet. A machine can't deliver anything locally with just an IP; it *must* translate IP → MAC first.
 
 That translator is **ARP** (Address Resolution Protocol). Its one job:
 
@@ -196,11 +256,11 @@ That translator is **ARP** (Address Resolution Protocol). Its one job:
 ### How ARP works, step by step
 
 ```
-My laptop (192.168.1.34) wants to reach 192.168.1.1
+My laptop (192.168.1.24) wants to reach 192.168.1.1
 
 1. ARP REQUEST  — a broadcast, sent to EVERYONE on the subnet
    Laptop -> all devices:
-   "Who has 192.168.1.1? Tell 192.168.1.34 your MAC."
+   "Who has 192.168.1.1? Tell 192.168.1.24 your MAC."
    (destination MAC = ff:ff:ff:ff:ff:ff  <- the broadcast address)
 
 2. ARP REPLY    — a unicast, only the owner answers
@@ -235,7 +295,7 @@ An attacker sends **fake ARP replies** to both sides:
 
 ```
 To my laptop:  "192.168.1.1  is at [ATTACKER's MAC]"   (lie)
-To the router: "192.168.1.34 is at [ATTACKER's MAC]"   (lie)
+To the router: "192.168.1.24 is at [ATTACKER's MAC]"   (lie)
 
 Both believe it (no verification), so now:
 
@@ -263,7 +323,7 @@ The practical takeaway: always use HTTPS plus a VPN on public Wi-Fi. Even if som
 ### The complete mental model
 
 ```
-IP ADDRESS (192.168.1.34) = WHERE
+IP ADDRESS (192.168.1.24) = WHERE
 routes data across networks
         |
         |  must become a MAC for local delivery
@@ -442,7 +502,7 @@ I type:  https://example.com
       |
    [ HTTP ]   the actual request/response (what page I want, what the server says)
    [ TCP  ]   reliable connection — "the call"
-   [ IP   ]   192.168.1.34  -> WHERE (routing)
+   [ IP   ]   192.168.1.24  -> WHERE (routing)
    [ MAC+ARP] -> WHO (local delivery)
 ```
 
@@ -638,11 +698,11 @@ Every connection has *two* ports. When my laptop browses Google:
 
 ```
 My laptop                           Google server
-192.168.1.34 : 51324    ------->    142.250.182.14 : 443
+192.168.1.24 : 51324    ------->    142.250.182.14 : 443
 (random ephemeral port)             (well-known HTTPS port)
 ```
 
-The **destination** port is fixed and known (`443` = HTTPS). My **source** port is random/ephemeral — it's how my OS tracks which of my many connections a reply belongs to. When Google replies, it sends to `192.168.1.34:51324`, and my OS routes that data back to the right browser tab.
+The **destination** port is fixed and known (`443` = HTTPS). My **source** port is random/ephemeral — it's how my OS tracks which of my many connections a reply belongs to. When Google replies, it sends to `192.168.1.24:51324`, and my OS routes that data back to the right browser tab.
 
 ## TCP vs UDP + the Handshake
 
@@ -699,7 +759,7 @@ A single server (e.g. `:443`) handles thousands of simultaneous clients. How doe
 
 ```
 1. Protocol         (TCP or UDP)
-2. Source IP        (192.168.1.34)
+2. Source IP        (192.168.1.24)
 3. Source Port      (51324)
 4. Destination IP   (142.250.182.14)
 5. Destination Port (443)
@@ -847,7 +907,7 @@ tcpdump -r capture.pcap -nn
 Reading a line:
 
 ```
-12:30:45.123 IP 192.168.1.34.51324 > 142.250.182.14.443: Flags [S], seq 12345...
+12:30:45.123 IP 192.168.1.24.51324 > 142.250.182.14.443: Flags [S], seq 12345...
             |   |--source IP.port-|   |--dest IP.port---|        |
          timestamp                                            [S]=SYN (handshake start)
 ```
@@ -1125,14 +1185,14 @@ NAT was invented to solve the IPv4 shortage (many devices sharing one public IP,
 
 ```
 INSIDE (private)             ROUTER/NAT           OUTSIDE (internet)
-192.168.1.34:51324  ----> 203.0.113.5:40000  ----> 142.250.182.14:443
+192.168.1.24:51324  ----> 203.0.113.5:40000  ----> 142.250.182.14:443
 192.168.1.40:52001  ----> 203.0.113.5:40001  ----> ...
       |                        |
  private IPs              one public IP, rewrites source IP+port,
  (not routable)           keeps a translation table
 ```
 
-The NAT device keeps a translation table mapping inside `IP:port` ↔ public `IP:port`. When a reply comes back to `203.0.113.5:40000`, it looks up the table and forwards it to `192.168.1.34:51324`.
+The NAT device keeps a translation table mapping inside `IP:port` ↔ public `IP:port`. When a reply comes back to `203.0.113.5:40000`, it looks up the table and forwards it to `192.168.1.24:51324`.
 
 Why NAT blocks inbound attacks: an attacker who sends a packet to `203.0.113.5:40000` out of the blue hits a NAT table with *no entry* for that unsolicited inbound connection → the router has nothing to translate it to → dropped.
 
