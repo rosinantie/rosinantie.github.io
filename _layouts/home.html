@@ -55,6 +55,24 @@ layout: default
     pointer-events: none;
     background: transparent;
   }
+  .site-description .desc-ta,
+  .site-description .desc-en {
+    margin-bottom: 0.35rem;
+  }
+  .desc-translate {
+    display: inline-block;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.85em;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  .desc-translate:hover { opacity: 1; }
   @media (prefers-reduced-motion: reduce) {
     .tamil-dot-canvas { animation: none; }
   }
@@ -66,10 +84,34 @@ layout: default
 <header>
   <h1 class="hero-title">தி லீ <span class="tamil-p">ப<canvas class="tamil-dot-canvas" aria-hidden="true"></canvas></span><br><span class="dilip-name">D ì <span class="dilip-l">l<span class="dilip-smile" aria-hidden="true">⌣</span></span> í p</span><span class="dilip-codename">({{ site.data.profile.codename }})</span></h1>
   {%-if site.theme_config.show_description-%}
-    <p>{{ site.description | newline_to_br }}</p>
+    <div class="site-description">
+      <p class="desc-ta" lang="ta">{{ site.description | newline_to_br }}</p>
+      {%- if site.description_en -%}
+        <p class="desc-en" lang="en" hidden>{{ site.description_en | newline_to_br }}</p>
+        <button type="button" class="desc-translate" aria-expanded="false">translate</button>
+      {%- endif -%}
+    </div>
   {%-endif-%}
 
 </header>
+
+{%- if site.theme_config.show_description and site.description_en -%}
+<script>
+  (function () {
+    var btn = document.querySelector('.desc-translate');
+    if (!btn) return;
+    var ta = document.querySelector('.desc-ta');
+    var en = document.querySelector('.desc-en');
+    btn.addEventListener('click', function () {
+      var showEn = en.hidden;
+      en.hidden = !showEn;
+      ta.hidden = showEn;
+      btn.textContent = showEn ? 'தமிழ்' : 'translate';
+      btn.setAttribute('aria-expanded', showEn ? 'true' : 'false');
+    });
+  })();
+</script>
+{%- endif -%}
 
 {%-include menu_item.html collection=site.data.menu.entries-%}
 

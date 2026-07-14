@@ -7,6 +7,10 @@ description: |
   யாதும் ஊரே யாவரும் கேளிர்; தீதும் நன்றும் பிறர்தர வாரா;
   நோதலும் தணிதலும் அவற்றோரன்ன; சாதலும் புதுவது அன்றே;
   வாழ்தல் இனிதென மகிழ்ந்தன்றும் இலமே; முனிவின் இன்னாது என்றலும் இலமே.
+description_en: | # English translation of the description, shown on "translate" toggle
+  Every town our home, every man our kin; good and ill come not from others;
+  and neither do our pain and its easing; death is nothing new;
+  we do not rejoice that life is sweet, nor, in hardship, call it bitter.
 permalink: /:slug.html
 
 favicon: "icons8-disco-ball-96.png" # name+extension of favicon (which must be put on the root folder)
