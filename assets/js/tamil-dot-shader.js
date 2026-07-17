@@ -25,6 +25,11 @@
 
     float hash(float n) { return fract(sin(n) * 43758.5453); }
 
+    // Smooth eased interpolation between two blink levels.
+    float easeBlink(float a, float b, float x) {
+      return mix(a, b, smoothstep(0.0, 1.0, x));
+    }
+
     void main() {
       vec2 uv = gl_FragCoord.xy / iResolution.xy;
       vec2 centered = uv - 0.5;
@@ -48,18 +53,31 @@
       float cycleIdx = floor(t / cycleLen);
       float phase = mod(t, cycleLen);
 
-      // Random steady-hold of 1.0-1.5s at the start of each cycle.
+      // Random steady-hold of 1.0-1.5s at the start of each cycle, then ease
+      // smoothly (not a hard step) into the blink burst over 0.25s.
       float hold = 1.0 + 0.5 * hash(cycleIdx + 7.0);
-      float inFit = step(hold, phase);   // 0 during hold, 1 during blink burst
+      float inFit = smoothstep(hold, hold + 0.25, phase); // 0 hold -> 1 blink burst
 
-      // Random on/off blink during the burst — slow enough that each on/off
-      // reads as a distinct blink rather than a fast shimmer.
-      float fast = step(0.55, hash(floor(t * 7.0) + 2.7));
+      // Random on/off blink during the burst. Instead of snapping, ease between
+      // the current and next blink level so each transition is a soft fade.
+      float blinkT = t * 3.5;               // blink rate
+      float blinkI = floor(blinkT);
+      float blinkF = fract(blinkT);
+      float lvlA = step(0.55, hash(blinkI + 2.7));       // this blink's target
+      float lvlB = step(0.55, hash(blinkI + 1.0 + 2.7)); // next blink's target
+      float fast = easeBlink(lvlA, lvlB, blinkF);
       float onOff = mix(1.0, fast, inFit);
 
-      // Gentle electrical buzz while it is lit.
-      float buzz = 0.92 + 0.08 * hash(floor(t * 26.0) + 13.3);
-      color *= buzz;
+      // Gentle, continuously eased electrical buzz while it is lit.
+      float buzzT = t * 9.0;
+      float buzz = 0.94 + 0.06 * easeBlink(
+        hash(floor(buzzT) + 13.3),
+        hash(floor(buzzT) + 1.0 + 13.3),
+        fract(buzzT));
+
+      // Soft breathing pulse so the glow feels alive even while steady-lit.
+      float breathe = 0.96 + 0.04 * (0.5 + 0.5 * sin(t * 1.6));
+      color *= buzz * breathe;
 
       // Premultiply by halo so the canvas edges fade out to transparent
       float alpha = clamp(halo + core, 0.0, 1.0) * onOff;
