@@ -1,0 +1,139 @@
+<h2 class="sr-only">Fully synced walkthrough combining C source, assembly, and a real memory column with moving rbp and rsp pointers for main calling function_a calling function_b</h2>
+<style>
+.code{font-family:var(--font-mono);font-size:11px;line-height:1.7;background:var(--surface-1);border-radius:var(--radius);border:0.5px solid var(--border);padding:8px 0;max-height:300px;overflow-y:auto}
+.ln{display:flex;padding:1px 10px;white-space:pre;color:var(--text-secondary)}
+.ln.hit{background:var(--bg-accent);color:var(--text-primary)}
+.ln .no{width:20px;color:var(--text-muted);flex-shrink:0}
+.fnlabel{font-size:10px;color:var(--text-muted);padding:4px 10px 2px}
+.dim{opacity:0.35}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.row{display:grid;grid-template-columns:70px 1fr 90px;align-items:center;padding:6px 10px;border-top:0.5px solid var(--border);font-family:var(--font-mono);font-size:11px}
+.row:first-child{border-top:none}
+.addr{color:var(--text-muted)}
+.label{color:var(--text-secondary);font-size:10px}
+.content{font-weight:500}
+.future .content,.future .label{opacity:0.3}
+.reclaimed{opacity:0.4}
+.reclaimed .content{text-decoration:line-through}
+.ptrs{display:flex;gap:4px;justify-content:flex-end}
+.pill{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--bg-accent);color:var(--text-accent);white-space:nowrap}
+.frame-main{background:var(--surface-1)}
+.frame-a{background:var(--bg-success)}
+.frame-b{background:var(--bg-warning)}
+.frame-none{background:transparent}
+.col{border:0.5px solid var(--border-strong);border-radius:8px;overflow:hidden}
+.btn{padding:6px 14px}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--text-secondary);margin-top:8px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+<button class="btn" id="prev">Prev</button>
+<button class="btn" id="next">Next</button>
+<span style="font-size:13px;color:var(--text-secondary)" id="ctr">Step 1 / 19</span>
+</div>
+<div style="font-family:var(--font-mono);font-size:13px;background:var(--surface-1);padding:9px 14px;border-radius:var(--radius);border:0.5px solid var(--border)" id="asmline"></div>
+<p style="font-size:13px;color:var(--text-secondary);margin:8px 0 0" id="note"></p>
+<div class="cols">
+<div class="code" id="cpanel"></div>
+<div class="code" id="apanel"></div>
+</div>
+<div class="col" id="stackcol"></div>
+<div class="legend">
+<span><span class="sw" style="background:var(--surface-1)"></span>main</span>
+<span><span class="sw" style="background:var(--bg-success)"></span>function_a</span>
+<span><span class="sw" style="background:var(--bg-warning)"></span>function_b</span>
+</div>
+<script>
+const C=[[3,'void function_b(int b_param) {'],[4,'  int b_local = 30;'],[5,'  printf("=== function_b ===\\n");'],[6,'  printf("&b_param: %p\\n", &b_param);'],[7,'  printf("&b_local: %p\\n\\n", &b_local);'],[8,'}'],[10,'void function_a(int a_param) {'],[11,'  int a_local = 20;'],[12,'  printf("=== function_a ===\\n");'],[13,'  printf("&a_param: %p\\n", &a_param);'],[14,'  printf("&a_local: %p\\n\\n", &a_local);'],[15,'  function_b(a_param + 5);'],[16,'}'],[18,'int main() {'],[19,'  int main_local = 10;'],[20,'  printf("=== main ===\\n");'],[21,'  printf("&main_local: %p\\n\\n", &main_local);'],[22,'  function_a(100);'],[23,'  return 0;'],[24,'}']];
+const A={b:[['b1','push rbp'],['b2','mov rbp, rsp'],['b3','sub rsp, 16'],['b4','mov [rbp-4], edi'],['b5','mov dword [rbp-8], 30'],['b6','call printf'],['b7','lea rsi,[rbp-4]; call printf'],['b8','lea rsi,[rbp-8]; call printf'],['b9','add rsp, 16'],['b10','pop rbp'],['b11','ret']],
+a:[['a1','push rbp'],['a2','mov rbp, rsp'],['a3','sub rsp, 16'],['a4','mov [rbp-4], edi'],['a5','mov dword [rbp-8], 20'],['a6','call printf'],['a7','lea rsi,[rbp-4]; call printf'],['a8','lea rsi,[rbp-8]; call printf'],['a9','mov edi,[rbp-4]; add edi,5'],['a10','call function_b'],['a11','add rsp, 16'],['a12','pop rbp'],['a13','ret']],
+m:[['m1','push rbp'],['m2','mov rbp, rsp'],['m3','sub rsp, 16'],['m4','mov dword [rbp-4], 0'],['m5','mov dword [rbp-8], 10'],['m6','call printf'],['m7','lea rsi,[rbp-8]; call printf'],['m8','mov edi,100; call function_a'],['m9','xor eax, eax'],['m10','add rsp, 16'],['m11','pop rbp'],['m12','ret']]};
+const rows=[
+{addr:'0x1008',label:'return address',fr:'none'},
+{addr:'0x1000',label:'saved rbp',fr:'main'},
+{addr:'0x0ff8',label:'main_local / pad',fr:'main'},
+{addr:'0x0ff0',label:'unused (align)',fr:'main'},
+{addr:'0x0fe8',label:'return address',fr:'none'},
+{addr:'0x0fe0',label:'saved rbp',fr:'a'},
+{addr:'0x0fd8',label:'a_local / a_param',fr:'a'},
+{addr:'0x0fd0',label:'unused (align)',fr:'a'},
+{addr:'0x0fc8',label:'return address',fr:'none'},
+{addr:'0x0fc0',label:'saved rbp',fr:'b'},
+{addr:'0x0fb8',label:'b_local / b_param',fr:'b'},
+{addr:'0x0fb0',label:'unused (align)',fr:'b'}
+];
+function st(c,fn,asmIds,note,exist,reclaimFrom,rbpRow,rspRow,vals){return{c,fn,asmIds,note,exist,reclaimFrom,rbpRow,rspRow,vals:vals||{}}}
+const S=[
+st([18],'m',['m1','m2'],"main saves caller's rbp, sets its own base at 0x1000.",2,2,1,1,{1:"caller's rbp"}),
+st([19],'m',['m3'],'16 bytes reserved. rsp drops to 0x0ff0.',4,4,1,3,{2:'?',3:'(unused)'}),
+st([19],'m',['m4','m5'],'pad = 0 and main_local = 10 written at 0x0ffc / 0x0ff8.',4,4,1,3,{2:'pad=0, main_local=10',3:'(unused)'}),
+st([20,21],'m',['m6','m7'],'Prints header, then &main_local = 0x0ff8.',4,4,1,3,{2:'pad=0, main_local=10',3:'(unused)'}),
+st([22],'m',['m8'],'edi=100. Return address pushed at 0x0fe8. Jumps into function_a.',5,5,1,4,{4:'\u2190 back into main'}),
+st([10],'a',['a1','a2'],"function_a saves main's rbp (0x1000), sets base at 0x0fe0.",6,6,5,5,{5:"main's rbp (0x1000)"}),
+st([11],'a',['a3'],'rsp drops to 0x0fd0.',8,8,5,7,{6:'?',7:'(unused)'}),
+st([10],'a',['a4'],'a_param = 100 written at 0x0fdc.',8,8,5,7,{6:'a_param=100',7:'(unused)'}),
+st([11],'a',['a5'],'a_local = 20 written at 0x0fd8.',8,8,5,7,{6:'a_local=20, a_param=100',7:'(unused)'}),
+st([12,13,14],'a',['a6','a7','a8'],'Prints &a_param=0x0fdc, &a_local=0x0fd8.',8,8,5,7,{6:'a_local=20, a_param=100',7:'(unused)'}),
+st([15],'a',['a9'],'a_param+5 = 105, placed in edi for function_b.',8,8,5,7,{6:'a_local=20, a_param=100',7:'(unused)'}),
+st([15],'a',['a10'],'Return address pushed at 0x0fc8. Jumps into function_b.',9,9,5,8,{8:'\u2190 back into function_a'}),
+st([3],'b',['b1','b2'],"function_b saves function_a's rbp (0x0fe0), sets base at 0x0fc0.",10,10,9,9,{9:"function_a's rbp (0x0fe0)"}),
+st([4],'b',['b3'],'rsp drops to 0x0fb0 \u2014 lowest point of the whole program.',12,12,9,11,{10:'?',11:'(unused)'}),
+st([3,4],'b',['b4','b5'],'b_param=105, b_local=30 written at 0x0fbc / 0x0fb8.',12,12,9,11,{10:'b_local=30, b_param=105',11:'(unused)'}),
+st([5,6,7],'b',['b6','b7','b8'],'Prints &b_param=0x0fbc, &b_local=0x0fb8.',12,12,9,11,{10:'b_local=30, b_param=105',11:'(unused)'}),
+st([8],'a',['b9','b10','b11'],"function_b's rows are reclaimed. rbp jumps back to 0x0fe0, rsp to 0x0fd0.",12,8,5,7,{}),
+st([16],'m',['a11','a12','a13'],"function_a's rows are reclaimed too. rbp back to 0x1000, rsp to 0x0ff0.",12,4,1,3,{}),
+st([23],'m',['m9','m10','m11','m12'],'main returns 0. All rows reclaimed \u2014 stack fully unwound.',12,0,-1,-1,{})
+];
+let i=0;
+function render(){
+document.getElementById('ctr').textContent=`Step ${i+1} / ${S.length}`;
+const s=S[i];
+document.getElementById('note').textContent=s.note;
+document.getElementById('asmline').textContent=s.asmIds.map(id=>{
+for(const k in A){const f=A[k].find(x=>x[0]===id);if(f)return f[1];}
+return id;
+}).join('  |  ');
+const cp=document.getElementById('cpanel');
+cp.innerHTML='';
+C.forEach(([ln,text])=>{
+const div=document.createElement('div');
+div.className='ln'+(s.c.includes(ln)?' hit':'');
+div.innerHTML=`<span class="no">${ln}</span><span>${text}</span>`;
+cp.appendChild(div);
+});
+const ap=document.getElementById('apanel');
+ap.innerHTML='';
+[['function_b','b'],['function_a','a'],['main','m']].forEach(([label,key])=>{
+const lab=document.createElement('div');
+lab.className='fnlabel'+(s.fn!==key?' dim':'');
+lab.textContent=label+':';
+ap.appendChild(lab);
+A[key].forEach(([id,text])=>{
+const div=document.createElement('div');
+let cls='ln'+(s.asmIds.includes(id)?' hit':'');
+if(s.fn!==key) cls+=' dim';
+div.className=cls;
+div.innerHTML=`<span class="no">${id}</span><span>${text}</span>`;
+ap.appendChild(div);
+});
+});
+const col=document.getElementById('stackcol');
+col.innerHTML='';
+rows.forEach((r,idx)=>{
+const div=document.createElement('div');
+let cls='row frame-'+r.fr;
+if(idx>=s.exist) cls+=' future';
+else if(idx<s.reclaimFrom) cls+=' reclaimed';
+div.className=cls;
+const content=s.vals[idx]!==undefined?s.vals[idx]:'';
+let ptrs='';
+if(idx===s.rbpRow) ptrs+='<span class="pill">rbp \u2192</span>';
+if(idx===s.rspRow) ptrs+='<span class="pill">rsp \u2192</span>';
+div.innerHTML=`<span class="addr">${r.addr}</span><span><span class="label">${r.label}</span><br><span class="content">${content}</span></span><span class="ptrs">${ptrs}</span>`;
+col.appendChild(div);
+});
+}
+document.getElementById('next').onclick=()=>{i=Math.min(i+1,S.length-1);render()};
+document.getElementById('prev').onclick=()=>{i=Math.max(i-1,0);render()};
+render();
+</script>

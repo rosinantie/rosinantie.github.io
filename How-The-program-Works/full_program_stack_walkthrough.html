@@ -1,0 +1,169 @@
+<h2 class="sr-only">Synced walkthrough of C source, assembly, and a real memory column for main, function_a, print_distance, function_b, and function_c, showing return values, a stack canary, a local array, and stack memory reuse between function_a and function_c</h2>
+<style>
+.code{font-family:var(--font-mono);font-size:11px;line-height:1.65;background:var(--surface-1);border-radius:var(--radius);border:0.5px solid var(--border);padding:8px 0;max-height:280px;overflow-y:auto}
+.ln{display:flex;padding:1px 10px;white-space:pre-wrap;color:var(--text-secondary)}
+.ln.hit{background:var(--bg-accent);color:var(--text-primary)}
+.ln .no{width:20px;color:var(--text-muted);flex-shrink:0}
+.fnlabel{font-size:10px;color:var(--text-muted);padding:4px 10px 2px}
+.dim{opacity:0.35}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.row{display:grid;grid-template-columns:82px 1fr 78px;align-items:center;padding:6px 10px;border-top:0.5px solid var(--border);font-family:var(--font-mono);font-size:11px}
+.row:first-child{border-top:none}
+.addr{color:var(--text-muted);font-size:10px}
+.label{color:var(--text-secondary);font-size:10px}
+.content{font-weight:500}
+.future .content,.future .label{opacity:0.25}
+.reclaimed{opacity:0.4}
+.reclaimed .content{text-decoration:line-through}
+.ptrs{display:flex;gap:4px;justify-content:flex-end}
+.pill{font-size:10px;padding:2px 6px;border-radius:999px;background:var(--bg-accent);color:var(--text-accent);white-space:nowrap}
+.frame-main{background:var(--surface-1)}
+.frame-a{background:var(--bg-success)}
+.frame-b{background:var(--bg-warning)}
+.frame-pd{background:var(--bg-pro)}
+.frame-c{background:var(--bg-accent)}
+.frame-none{background:transparent}
+.col{border:0.5px solid var(--border-strong);border-radius:8px;overflow:hidden;max-height:420px;overflow-y:auto}
+.btn{padding:6px 14px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--text-secondary);margin-top:8px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+</style>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+<button class="btn" id="prev">Prev</button>
+<button class="btn" id="next">Next</button>
+<span style="font-size:13px;color:var(--text-secondary)" id="ctr">Step 1 / 39</span>
+</div>
+<div style="font-family:var(--font-mono);font-size:12px;background:var(--surface-1);padding:8px 12px;border-radius:var(--radius);border:0.5px solid var(--border)" id="asmline"></div>
+<p style="font-size:13px;color:var(--text-secondary);margin:8px 0 0" id="note"></p>
+<div class="cols">
+<div class="code" id="cpanel"></div>
+<div class="code" id="apanel"></div>
+</div>
+<div class="col" id="stackcol"></div>
+<div class="legend">
+<span><span class="sw" style="background:var(--surface-1)"></span>main</span>
+<span><span class="sw" style="background:var(--bg-success)"></span>function_a</span>
+<span><span class="sw" style="background:var(--bg-pro)"></span>print_distance</span>
+<span><span class="sw" style="background:var(--bg-warning)"></span>function_b</span>
+<span><span class="sw" style="background:var(--bg-accent)"></span>function_c</span>
+</div>
+<script>
+const C=[[1,'void print_distance(const char *label, void *addr1, void *addr2) {'],[2,'  uintptr_t a1 = (uintptr_t)addr1;'],[3,'  uintptr_t a2 = (uintptr_t)addr2;'],[4,'  long diff = (long)(a1 - a2);'],[5,'  printf("[Offset] %s: %ld bytes apart...", label, diff, ...);'],[6,'}'],[7,'int function_b(int b_param) {'],[8,'  int b_local = 30;'],[9,'  int b_result = b_param + b_local;'],[10,'  printf("=== Inside function_b() ===");'],[11,'  printf("Address of b_param: %p", &b_param);'],[12,'  printf("Address of b_local: %p", &b_local);'],[13,'  printf("Address of b_result: %p", &b_result);'],[14,'  return b_result;'],[15,'}'],[16,'int function_a(int a_param) {'],[17,'  int a_local = 20; char a_buffer[64];'],[19,'  printf("=== Inside function_a() ===");'],[20,'  printf("Address of a_param: %p", &a_param);'],[21,'  printf("Address of a_local: %p", &a_local);'],[22,'  printf("Address of a_buffer: %p", a_buffer);'],[23,'  print_distance("...", &a_local, a_buffer);'],[24,'  int b_returned = function_b(a_param + 5);'],[25,'  printf("=== Back in function_a() ===");'],[26,'  printf("Address of b_returned: %p", &b_returned);'],[27,'  return a_local + b_returned;'],[28,'}  // stack canary checked here'],[29,'int function_c(int c_param) {'],[30,'  int c_local = 999;'],[31,'  printf("=== Inside function_c() ===");'],[32,'  printf("Address of c_local: %p", &c_local);'],[33,'  return c_local + c_param;'],[35,'int main() {'],[36,'  int main_local = 10;'],[37,'  printf("=== Inside main() ===");'],[38,'  printf("Address of main_local: %p", &main_local);'],[39,'  int a_returned = function_a(100);'],[40,'  printf("=== Back in main() ===");'],[41,'  printf("Address of a_returned: %p", &a_returned);'],[42,'  int c_returned = function_c(main_local);'],[43,'  printf("Address of c_returned: %p", &c_returned);'],[44,'  return 0;']];
+const A={
+pd:[['pd1','push rbp'],['pd2','mov rbp, rsp'],['pd3','sub rsp, 48'],['pd4','mov [rbp-8],rdi; [rbp-16],rsi; [rbp-24],rdx'],['pd5','mov rax,[rbp-16]; mov [rbp-32],rax  ; a1'],['pd6','mov rax,[rbp-24]; mov [rbp-40],rax  ; a2'],['pd7','sub rax,[rbp-40]; mov [rbp-48],rax  ; diff'],['pd8','cmovg + call printf'],['pd9','add rsp,48; pop rbp; ret']],
+b:[['b1','push rbp'],['b2','mov rbp, rsp'],['b3','sub rsp, 16'],['b4','mov [rbp-4], edi  ; b_param'],['b5','mov dword [rbp-8], 30  ; b_local'],['b6','add eax,[rbp-8]; mov [rbp-12],eax  ; b_result'],['b7','call printf'],['b8','lea rsi,[rbp-4]; call printf'],['b9','lea rsi,[rbp-8]; call printf'],['b10','lea rsi,[rbp-12]; call printf'],['b11','mov eax,[rbp-12]; add rsp,16; pop rbp; ret']],
+a:[['a1','push rbp'],['a2','mov rbp, rsp'],['a3','sub rsp, 96'],['a4','mov rax,[guard]; mov [rbp-8],rax  ; canary'],['a5','mov [rbp-84], edi  ; a_param'],['a6','mov dword [rbp-88], 20  ; a_local'],['a7','call printf'],['a8','lea rsi,[rbp-84]; call printf'],['a9','lea rsi,[rbp-88]; call printf'],['a10','lea rsi,[rbp-80]; call printf  ; a_buffer'],['a11','lea rdx,[rbp-80]; lea rsi,[rbp-88]; call print_distance'],['a12','mov edi,[rbp-84]; add edi,5; call function_b'],['a13','mov [rbp-92], eax  ; b_returned'],['a14','call printf'],['a15','lea rsi,[rbp-92]; call printf'],['a16','add eax,[rbp-92]; mov [rbp-96],eax  ; spill'],['a17','cmp canary; jne fail'],['a18','mov eax,[rbp-96]; add rsp,96; pop rbp; ret']],
+c:[['c1','push rbp'],['c2','mov rbp, rsp'],['c3','sub rsp, 16'],['c4','mov [rbp-4], edi  ; c_param'],['c5','mov dword [rbp-8], 999  ; c_local'],['c6','call printf'],['c7','lea rsi,[rbp-8]; call printf'],['c8','add eax,[rbp-4]; add rsp,16; pop rbp; ret']],
+m:[['m1','push rbp'],['m2','mov rbp, rsp'],['m3','sub rsp, 16'],['m4','mov [rbp-4], 0'],['m5','mov [rbp-8], 10  ; main_local'],['m6','call printf'],['m7','lea rsi,[rbp-8]; call printf'],['m8','mov edi,100; call function_a'],['m9','mov [rbp-12], eax  ; a_returned'],['m10','call printf'],['m11','lea rsi,[rbp-12]; call printf'],['m12','mov edi,[rbp-8]; call function_c'],['m13','mov [rbp-16], eax  ; c_returned'],['m14','lea rsi,[rbp-16]; call printf'],['m15','xor eax,eax; add rsp,16; pop rbp; ret']]};
+const ADDR=['0x1008','0x1000','0x0ff8','0x0ff0','0x0fe8','0x0fe0','0x0fd8','0x0fd0','0x0f90\u20130x0fcf','0x0f88','0x0f80','0x0f78','0x0f70','0x0f68','0x0f60','0x0f58','0x0f50','0x0f48','0x0f40'];
+const N=ADDR.length;
+let status=Array(N).fill('future'),owner=Array(N).fill('none'),label=Array(N).fill(''),content=Array(N).fill('');
+let rbp=-1,rsp=-1;
+const S=[];
+function set(idx,lab,cont,own){label[idx]=lab;content[idx]=cont;owner[idx]=own;status[idx]='active';}
+function reclaim(...idxs){idxs.forEach(k=>status[k]='reclaimed');}
+function snap(c,fn,asmIds,note){S.push({c,fn,asmIds,note,status:status.slice(),owner:owner.slice(),label:label.slice(),content:content.slice(),rbp,rsp});}
+set(0,'return address','\u2190 caller of main','none');status[0]='active';
+set(1,'saved rbp',"caller's rbp",'main');rbp=1;rsp=1;
+snap([35],'m',['m1'],"main saves caller's rbp, base at 0x1000.");
+set(2,'pad / main_local','?','main');set(3,'a_returned / c_returned','?','main');rsp=3;
+snap([36],'m',['m3'],'16 bytes reserved. rsp drops to 0x0ff0.');
+content[2]='pad=0, main_local=10';
+snap([36],'m',['m4','m5'],'main_local = 10 written at 0x0ff8.');
+snap([37,38],'m',['m6','m7'],'Prints &main_local = 0x0ff8.');
+set(4,'return address','\u2190 back into main','none');rsp=4;
+snap([39],'m',['m8'],'Return address pushed at 0x0fe8. Jumps into function_a.');
+set(5,'saved rbp',"main's rbp (0x1000)",'a');rbp=5;rsp=5;
+snap([16],'a',['a1'],"function_a saves main's rbp, base at 0x0fe0.");
+set(6,'stack canary','?','a');set(7,'unused (align)','?','a');set(8,'a_buffer[64]','?','a');set(9,'a_local / a_param','?','a');set(10,'spill / b_returned','?','a');rsp=10;
+snap([16],'a',['a3'],'96 bytes reserved: canary + a_local + a_buffer[64] + spill slots.');
+content[6]='canary value (guards return addr)';
+snap([16],'a',['a4'],'Stack canary written at 0x0fd8, right below the saved rbp \u2014 this protects against buffer overflows in a_buffer.');
+content[9]='a_local=20, a_param=100';
+snap([17],'a',['a5','a6'],'a_param=100, a_local=20 written at 0x0f8c / 0x0f88.');
+content[8]='a_buffer (64 uninitialized bytes)';
+snap([19,20,21,22],'a',['a7','a8','a9','a10'],'Prints &a_param, &a_local, then &a_buffer = 0x0f90.');
+set(11,'return address','\u2190 back into function_a','none');rsp=11;
+snap([23],'a',['a11'],'Calls print_distance(label, &a_local, a_buffer). Return address pushed at 0x0f78.');
+set(12,'saved rbp',"function_a's rbp (0x0fe0)",'pd');rbp=12;rsp=12;
+snap([1],'pd',['pd1'],"print_distance saves function_a's rbp, base at 0x0f70.");
+set(13,'label','?','pd');set(14,'addr1 (&a_local)','?','pd');set(15,'addr2 (a_buffer)','?','pd');set(16,'a1','?','pd');set(17,'a2','?','pd');set(18,'diff','?','pd');rsp=18;
+snap([1],'pd',['pd3'],'48 bytes reserved for label, addr1, addr2, a1, a2, diff.');
+content[13]='label = "a_local to a_buffer..."';content[14]='addr1 = 0x0f88 (&a_local)';content[15]='addr2 = 0x0f90 (a_buffer)';
+snap([1],'pd',['pd4'],'Parameters copied onto the stack: label, addr1, addr2.');
+content[16]='a1 = 0x0f88';content[17]='a2 = 0x0f90';content[18]='diff = -8 (a1 - a2)';
+snap([2,3,4],'pd',['pd5','pd6','pd7'],'a1 - a2 = -8. Negative, so a_buffer sits at a higher address than a_local \u2014 confirming downward growth from a_local to a_buffer.');
+snap([5],'pd',['pd8'],'Prints the offset and "Stack grew downward".');
+reclaim(11,12,13,14,15,16,17,18);rbp=5;rsp=10;
+snap([6],'pd',['pd9'],"print_distance's frame is fully reclaimed. rbp/rsp return to function_a's values.");
+set(11,'return address','\u2190 back into function_a (reused)','none');rsp=11;
+snap([24],'a',['a12'],'a_param+5=105 in edi. Return address pushed at 0x0f78 \u2014 the exact same address print_distance just used.');
+set(12,'saved rbp',"function_a's rbp (0x0fe0)",'b');rbp=12;rsp=12;
+snap([7],'b',['b1'],"function_b reuses rbp=0x0f70 \u2014 print_distance's old frame base, now function_b's.");
+set(13,'b_local / b_param','?','b');set(14,'b_result / unused','?','b');rsp=14;
+snap([7],'b',['b3'],'16 bytes reserved. These are the same bytes print_distance used for label and addr1.');
+content[13]='b_local=30, b_param=105';
+snap([8],'b',['b4','b5'],'b_param=105, b_local=30 written at 0x0f6c / 0x0f68 \u2014 overwriting where the "label" pointer used to be.');
+content[14]='b_result=135';
+snap([9],'b',['b6'],'b_result = b_param + b_local = 135, written at 0x0f64.');
+snap([10,11,12,13],'b',['b7','b8','b9','b10'],'Prints &b_param, &b_local, &b_result.');
+reclaim(11,12,13,14);rbp=5;rsp=10;
+snap([14,15],'b',['b11'],"function_b returns 135 in eax. Its frame (and the addresses it borrowed from print_distance) is reclaimed.");
+content[10]='spill=?, b_returned=135';
+snap([24],'a',['a13'],'eax (135) stored into b_returned at 0x0f84.');
+snap([25,26],'a',['a14','a15'],'Prints &b_returned = 0x0f84.');
+content[10]='spill=155, b_returned=135';
+snap([27],'a',['a16'],'a_local + b_returned = 20+135 = 155, stored into the spill slot at 0x0f80 for the return value.');
+snap([27,28],'a',['a17'],'Canary check: current guard value compared against the one saved at 0x0fd8. Match \u2192 safe to return. (A mismatch here means a_buffer overflowed and corrupted the canary \u2014 the program would abort.)');
+reclaim(5,6,7,8,9,10);rbp=1;rsp=3;
+snap([28],'a',['a18'],"function_a returns 155 in eax. Its entire frame \u2014 canary, a_buffer, everything \u2014 is reclaimed.");
+content[3]='a_returned=155, c_returned=?';
+snap([39],'m',['m9'],'eax (155) stored into a_returned at 0x0ff4.');
+snap([40,41],'m',['m10','m11'],'Prints &a_returned = 0x0ff4.');
+set(4,'return address','\u2190 back into main (reused)','none');rsp=4;
+snap([42],'m',['m12'],'edi=main_local(10). Return address pushed at 0x0fe8 \u2014 reusing the exact slot from the function_a call.');
+set(5,'saved rbp',"main's rbp (0x1000, reused)",'c');rbp=5;rsp=5;
+snap([29],'c',['c1'],"function_c's rbp = 0x0fe0 \u2014 the identical address function_a's rbp used.");
+set(6,'c_local / c_param','?','c');set(7,'unused (align)','?','c');rsp=7;
+snap([29],'c',['c3'],'16 bytes reserved at 0x0fd0\u20130x0fd7 \u2014 this is the SAME 8 bytes that held function_a\'s stack canary.');
+content[6]='c_local=999, c_param=10';
+snap([30],'c',['c4','c5'],"c_local=999, c_param=10 now occupy 0x0fd8\u20130x0fdf \u2014 literally overwriting function_a's old canary bytes.");
+snap([31,32],'c',['c6','c7'],'Prints &c_local = 0x0fd8.');
+reclaim(4,5,6,7);rbp=1;rsp=3;
+snap([33],'c',['c8'],'function_c returns c_local+c_param = 1009 in eax. Frame reclaimed.');
+content[3]='a_returned=155, c_returned=1009';
+snap([42],'m',['m13'],'eax (1009) stored into c_returned at 0x0ff0.');
+snap([43],'m',['m14'],'Prints &c_returned = 0x0ff0.');
+reclaim(0,1,2,3);rbp=-1;rsp=-1;
+snap([44],'m',['m15'],'main returns 0. Every row has now been used and reclaimed at least once \u2014 notice rows 4\u20137 were each claimed by two different functions.');
+let i=0;
+function render(){
+document.getElementById('ctr').textContent=`Step ${i+1} / ${S.length}`;
+const s=S[i];
+document.getElementById('note').textContent=s.note;
+document.getElementById('asmline').textContent=s.asmIds.map(id=>{for(const k in A){const f=A[k].find(x=>x[0]===id);if(f)return f[1];}return id;}).join('   |   ');
+const cp=document.getElementById('cpanel');cp.innerHTML='';
+C.forEach(([ln,text])=>{const div=document.createElement('div');div.className='ln'+(s.c.includes(ln)?' hit':'');div.innerHTML=`<span class="no">${ln}</span><span>${text}</span>`;cp.appendChild(div);});
+const ap=document.getElementById('apanel');ap.innerHTML='';
+[['print_distance','pd'],['function_b','b'],['function_a','a'],['function_c','c'],['main','m']].forEach(([lbl,key])=>{
+const l=document.createElement('div');l.className='fnlabel'+(s.fn!==key?' dim':'');l.textContent=lbl+':';ap.appendChild(l);
+A[key].forEach(([id,text])=>{const div=document.createElement('div');let cls='ln'+(s.asmIds.includes(id)?' hit':'');if(s.fn!==key)cls+=' dim';div.className=cls;div.innerHTML=`<span class="no">${id}</span><span>${text}</span>`;ap.appendChild(div);});
+});
+const col=document.getElementById('stackcol');col.innerHTML='';
+for(let idx=0;idx<N;idx++){
+const div=document.createElement('div');
+let cls='row frame-'+(s.owner[idx]||'none');
+if(s.status[idx]==='future')cls+=' future';
+else if(s.status[idx]==='reclaimed')cls+=' reclaimed';
+div.className=cls;
+let ptrs='';
+if(idx===s.rbp)ptrs+='<span class="pill">rbp \u2192</span>';
+if(idx===s.rsp)ptrs+='<span class="pill">rsp \u2192</span>';
+div.innerHTML=`<span class="addr">${ADDR[idx]}</span><span><span class="label">${s.label[idx]||''}</span><br><span class="content">${s.content[idx]||''}</span></span><span class="ptrs">${ptrs}</span>`;
+col.appendChild(div);
+}
+}
+document.getElementById('next').onclick=()=>{i=Math.min(i+1,S.length-1);render()};
+document.getElementById('prev').onclick=()=>{i=Math.max(i-1,0);render()};
+render();
+</script>

@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synced Stack & Assembly Walkthrough</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'Fira Code', monospace;
+
+      --bg-dark: #0b0f19;
+      --surface-1: #111827;
+      --surface-2: #1f2937;
+      --surface-3: #374151;
+      --border: #1f2937;
+      --border-strong: #374151;
+
+      --text-primary: #f9fafb;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --text-accent: #38bdf8;
+
+      /* C Syntax Highlighting Tokens */
+      --syn-kw: #f472b6;       /* Keywords: void, int, return */
+      --syn-type: #22d3ee;     /* Types: uintptr_t, const char */
+      --syn-fn: #60a5fa;       /* Function names */
+      --syn-str: #34d399;      /* Strings */
+      --syn-num: #fbbf24;      /* Numbers */
+      --syn-cm: #6b7280;       /* Comments */
+      --syn-var: #e2e8f0;      /* Variables */
+
+      /* Assembly Highlighting Tokens */
+      --asm-op: #c084fc;       /* Opcodes: push, mov, sub, call */
+      --asm-reg: #f43f5e;      /* Registers: rbp, rsp, eax */
+      --asm-hex: #f59e0b;      /* Hex values */
+      --asm-lbl: #a78bfa;      /* Function labels */
+
+      /* Stack Frame Colors */
+      --frame-main: rgba(56, 189, 248, 0.12);
+      --frame-a: rgba(52, 211, 153, 0.12);
+      --frame-b: rgba(251, 191, 36, 0.12);
+      --frame-pd: rgba(167, 139, 250, 0.12);
+      --frame-c: rgba(96, 165, 250, 0.12);
+
+      --color-main: #38bdf8;
+      --color-a: #34d399;
+      --color-pd: #a78bfa;
+      --color-b: #fbbf24;
+      --color-c: #60a5fa;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h1 span.badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--color-main);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    p.subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      background: var(--surface-1);
+      padding: 12px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--surface-2);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: var(--surface-3);
+      border-color: #4b5563;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-grow: 1;
+      min-width: 200px;
+    }
+
+    input[type="range"] {
+      flex-grow: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--surface-3);
+      outline: none;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    .step-counter {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-accent);
+      min-width: 95px;
+      text-align: right;
+    }
+
+    .status-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      margin-bottom: 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    @media (max-width: 900px) {
+      .status-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .asm-line {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #f59e0b;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border-left: 3px solid #f59e0b;
+      margin-bottom: 6px;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .note-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .registers-bar {
+      display: flex;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .reg-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 6px;
+      border-right: 1px solid var(--border);
+    }
+
+    .reg-item:last-child {
+      border-right: none;
+    }
+
+    .reg-name {
+      color: var(--text-muted);
+      font-size: 9px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .reg-val {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1.1fr 380px;
+      gap: 14px;
+    }
+
+    @media (max-width: 1150px) {
+      .app-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      padding-left: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .code-panel {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.65;
+      background: var(--surface-1);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 8px 0;
+      height: 480px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .ln {
+      display: flex;
+      padding: 2px 12px;
+      white-space: pre;
+      color: var(--text-secondary);
+      transition: background 0.1s ease;
+    }
+
+    .ln.hit {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fef08a;
+      font-weight: 600;
+      border-left: 3px solid #fbbf24;
+      padding-left: 9px;
+    }
+
+    .ln .no {
+      width: 34px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      user-select: none;
+      text-align: right;
+      padding-right: 12px;
+    }
+
+    .c-kw { color: var(--syn-kw); font-weight: 600; }
+    .c-type { color: var(--syn-type); }
+    .c-fn { color: var(--syn-fn); font-weight: 600; }
+    .c-str { color: var(--syn-str); }
+    .c-num { color: var(--syn-num); }
+    .c-cm { color: var(--syn-cm); font-style: italic; }
+    .c-var { color: var(--syn-var); }
+
+    .asm-op { color: var(--asm-op); font-weight: 600; }
+    .asm-reg { color: var(--asm-reg); font-weight: 600; }
+    .asm-hex { color: var(--asm-hex); }
+    .asm-lbl { color: var(--asm-lbl); font-weight: 600; }
+
+    .fnlabel {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-accent);
+      padding: 8px 12px 3px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      margin-top: 4px;
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .fnlabel:first-child {
+      border-top: none;
+      margin-top: 0;
+    }
+
+    .dim {
+      opacity: 0.3;
+    }
+
+    .stack-col {
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      background: var(--surface-1);
+      height: 480px;
+      overflow-y: auto;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 110px 1fr 65px;
+      align-items: center;
+      padding: 6px 10px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      transition: all 0.2s ease;
+    }
+
+    .row:first-child {
+      border-top: none;
+    }
+
+    .addr {
+      color: var(--text-muted);
+      font-size: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    .label {
+      color: var(--text-secondary);
+      font-size: 10px;
+      display: block;
+    }
+
+    .content {
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    .future .content,
+    .future .label {
+      opacity: 0.2;
+    }
+
+    .reclaimed {
+      opacity: 0.4;
+      background: rgba(15, 23, 42, 0.5) !important;
+    }
+
+    .reclaimed .content {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .ptrs {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-end;
+    }
+
+    .pill {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #ffffff;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    /* Stack Frame Color Themes */
+    .frame-main { background: var(--frame-main); border-left: 3px solid var(--color-main); }
+    .frame-a { background: var(--frame-a); border-left: 3px solid var(--color-a); }
+    .frame-b { background: var(--frame-b); border-left: 3px solid var(--color-b); }
+    .frame-pd { background: var(--frame-pd); border-left: 3px solid var(--color-pd); }
+    .frame-c { background: var(--frame-c); border-left: 3px solid var(--color-c); }
+    .frame-none { background: transparent; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 14px;
+      padding: 10px 16px;
+      background: var(--surface-1);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sw {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .explanation-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-strong);
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+
+    .exp-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .exp-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .exp-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .exp-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: rgba(167, 139, 250, 0.15);
+      color: var(--color-pd);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+    }
+
+    .exp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .exp-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .exp-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .exp-box-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot.yellow { background: #f59e0b; }
+    .dot.blue { background: #38bdf8; }
+    .dot.green { background: #34d399; }
+
+    .exp-box-content {
+      font-size: 12.5px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div>
+      <h1>Synced Stack & Assembly Walkthrough <span class="badge">GCC / Clang x86-64</span></h1>
+      <p class="subtitle">Interactive mapping of C source code, CPU registers, stack memory frames, and GDB assembly</p>
+    </div>
+  </header>
+
+  <div class="control-panel">
+    <div class="btn-group">
+      <button class="btn" id="prev">← Prev</button>
+      <button class="btn btn-primary" id="play">▶ Play</button>
+      <button class="btn" id="next">Next →</button>
+    </div>
+
+    <div class="slider-container">
+      <input type="range" id="slider" min="0" value="0">
+    </div>
+
+    <div class="step-counter" id="ctr">Step 1 / 1</div>
+  </div>
+
+  <div class="status-card">
+    <div>
+      <div class="asm-line" id="asmline">0x00001330 <+0>: push rbp</div>
+      <div class="note-text" id="note">Loading step details...</div>
+    </div>
+    <div class="registers-bar">
+      <div class="reg-item"><span class="reg-name">RSP</span><span class="reg-val" id="reg-rsp">0x...de60</span></div>
+      <div class="reg-item"><span class="reg-name">RBP</span><span class="reg-val" id="reg-rbp">0x...de60</span></div>
+      <div class="reg-item"><span class="reg-name">RAX</span><span class="reg-val" id="reg-rax">0</span></div>
+      <div class="reg-item"><span class="reg-name">RDI</span><span class="reg-val" id="reg-rdi">0</span></div>
+    </div>
+  </div>
+
+  <div class="app-grid">
+    <div>
+      <div class="panel-header"><span>C Source Code</span><span>GCC -O0 -g</span></div>
+      <div class="code-panel" id="cpanel"></div>
+    </div>
+
+    <div>
+      <div class="panel-header"><span>x86-64 Disassembly</span><span>Intel Syntax</span></div>
+      <div class="code-panel" id="apanel"></div>
+    </div>
+
+    <div>
+      <div class="panel-header"><span>Stack Memory</span><span>High → Low</span></div>
+      <div class="stack-col" id="stackcol"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="sw" style="background: var(--color-main)"></span> main() [rsp-0x10]</div>
+    <div class="legend-item"><span class="sw" style="background: var(--color-a)"></span> function_a() [rsp-0x60]</div>
+    <div class="legend-item"><span class="sw" style="background: var(--color-pd)"></span> print_distance() [rsp-0x30]</div>
+    <div class="legend-item"><span class="sw" style="background: var(--color-b)"></span> function_b() [rsp-0x10]</div>
+    <div class="legend-item"><span class="sw" style="background: var(--color-c)"></span> function_c() [rsp-0x10]</div>
+  </div>
+
+  <div class="explanation-card">
+    <div class="exp-header">
+      <div class="exp-title-group">
+        <span style="font-size: 16px;">💡</span>
+        <span class="exp-title">Step Instruction & Deep Dive Analysis</span>
+      </div>
+      <span class="exp-badge" id="exp-cat">Function Prologue</span>
+    </div>
+    <div class="exp-grid">
+      <div class="exp-box">
+        <div class="exp-box-title"><span class="dot yellow"></span> What is Happening</div>
+        <div class="exp-box-content" id="exp-action">Initializing step breakdown...</div>
+      </div>
+      <div class="exp-box">
+        <div class="exp-box-title"><span class="dot blue"></span> CPU & Memory Operations</div>
+        <div class="exp-box-content" id="exp-details">Loading CPU changes...</div>
+      </div>
+      <div class="exp-box">
+        <div class="exp-box-title"><span class="dot green"></span> Key Low-Level Takeaway</div>
+        <div class="exp-box-content" id="exp-takeaway">Loading takeaway...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const C = [
+  [1, '#include <stdint.h>'],
+  [2, '#include <stdio.h>'],
+  [3, ''],
+  [4, '// Helper function to print address distance in bytes'],
+  [5, 'void print_distance(const char *label, void *addr1, void *addr2) {'],
+  [6, '  uintptr_t a1 = (uintptr_t)addr1;'],
+  [7, '  uintptr_t a2 = (uintptr_t)addr2;'],
+  [8, '  long diff = (long)(a1 - a2);'],
+  [9, '  printf("  [Offset] %s: %ld bytes apart (%s)\\n\\n", label, diff,'],
+  [10, '         diff > 0 ? "Stack grew downward ↓" : "Stack grew upward ↑");'],
+  [11, '}'],
+  [12, ''],
+  [13, '// Function 2: Called by function_a, returns calculated integer'],
+  [14, 'int function_b(int b_param) {'],
+  [15, '  int b_local = 30;'],
+  [16, '  int b_result = b_param + b_local;'],
+  [17, ''],
+  [18, '  printf("=== Inside function_b() ===\\n");'],
+  [19, '  printf("Address of b_param  : %p (Value: %d)\\n", (void *)&b_param, b_param);'],
+  [20, '  printf("Address of b_local  : %p (Value: %d)\\n", (void *)&b_local, b_local);'],
+  [21, '  printf("Address of b_result : %p (Value: %d)\\n\\n", (void *)&b_result,'],
+  [22, '         b_result);'],
+  [23, ''],
+  [24, '  // Return value is stored in RAX register and passed back to caller'],
+  [25, '  return b_result;'],
+  [26, '}'],
+  [27, ''],
+  [28, '// Function 1: Called by main, calls function_b and receives return value'],
+  [29, 'int function_a(int a_param) {'],
+  [30, '  int a_local = 20;'],
+  [31, '  char a_buffer[64]; // Local array carving 64 bytes on stack'],
+  [32, ''],
+  [33, '  printf("=== Inside function_a() ===\\n");'],
+  [34, '  printf("Address of a_param  : %p (Value: %d)\\n", (void *)&a_param, a_param);'],
+  [35, '  printf("Address of a_local  : %p (Value: %d)\\n", (void *)&a_local, a_local);'],
+  [36, '  printf("Address of a_buffer : %p\\n", (void *)a_buffer);'],
+  [37, ''],
+  [38, '  // Measure distance from a_local to a_buffer space'],
+  [39, '  print_distance("a_local to a_buffer space", &a_local, a_buffer);'],
+  [40, ''],
+  [41, '  // Call function_b, store return value in local variable b_returned'],
+  [42, '  int b_returned = function_b(a_param + 5);'],
+  [43, ''],
+  [44, '  printf("=== Back in function_a() (after function_b returned) ===\\n");'],
+  [45, '  printf("Address of b_returned: %p (Value received: %d)\\n\\n",'],
+  [46, '         (void *)&b_returned, b_returned);'],
+  [47, ''],
+  [48, '  // Return combined result to main'],
+  [49, '  return a_local + b_returned;'],
+  [50, '}'],
+  [51, ''],
+  [52, '// Function 3: Called by main AFTER function_a finishes (Sibling call)'],
+  [53, 'int function_c(int c_param) {'],
+  [54, '  int c_local = 999;'],
+  [55, ''],
+  [56, '  printf("=== Inside function_c() (Called after function_a returned) ===\\n");'],
+  [57, '  printf("Address of c_local   : %p (Value: %d)\\n\\n", (void *)&c_local,'],
+  [58, '         c_local);'],
+  [59, ''],
+  [60, '  return c_local + c_param;'],
+  [61, '}'],
+  [62, ''],
+  [63, 'int main() {'],
+  [64, '  int main_local = 10;'],
+  [65, ''],
+  [66, '  printf("=== Inside main() ===\\n");'],
+  [67, '  printf("Address of main_local: %p (Value: %d)\\n\\n", (void *)&main_local,'],
+  [68, '         main_local);'],
+  [69, ''],
+  [70, '  // Call function_a and store return value'],
+  [71, '  int a_returned = function_a(100);'],
+  [72, ''],
+  [73, '  printf("=== Back in main() (after function_a returned) ===\\n");'],
+  [74, '  printf("Address of a_returned: %p (Value received from function_a: %d)\\n\\n",'],
+  [75, '         (void *)&a_returned, a_returned);'],
+  [76, ''],
+  [77, '  // Call function_c to demonstrate stack memory reuse with return functions'],
+  [78, '  int c_returned = function_c(main_local);'],
+  [79, ''],
+  [80, '  printf("Address of c_returned: %p (Value received from function_c: %d)\\n",'],
+  [81, '         (void *)&c_returned, c_returned);'],
+  [82, ''],
+  [83, '  return 0;'],
+  [84, '}']
+];
+
+/* Disassembly Data */
+const A = {
+  pd: [
+    ['pd0',  '0x1140 <+0>:   push rbp'],
+    ['pd1',  '0x1141 <+1>:   mov rbp,rsp'],
+    ['pd4',  '0x1144 <+4>:   sub rsp,0x30'],
+    ['pd8',  '0x1148 <+8>:   mov QWORD PTR [rbp-0x8],rdi'],
+    ['pd12', '0x114c <+12>:  mov QWORD PTR [rbp-0x10],rsi'],
+    ['pd16', '0x1150 <+16>:  mov QWORD PTR [rbp-0x18],rdx'],
+    ['pd20', '0x1154 <+20>:  mov rax,QWORD PTR [rbp-0x10]'],
+    ['pd24', '0x1158 <+24>:  mov QWORD PTR [rbp-0x20],rax'],
+    ['pd28', '0x115c <+28>:  mov rax,QWORD PTR [rbp-0x18]'],
+    ['pd32', '0x1160 <+32>:  mov QWORD PTR [rbp-0x28],rax'],
+    ['pd36', '0x1164 <+36>:  mov rax,QWORD PTR [rbp-0x20]'],
+    ['pd40', '0x1168 <+40>:  sub rax,QWORD PTR [rbp-0x28]'],
+    ['pd44', '0x116c <+44>:  mov QWORD PTR [rbp-0x30],rax'],
+    ['pd48', '0x1170 <+48>:  mov rsi,QWORD PTR [rbp-0x8]'],
+    ['pd52', '0x1174 <+52>:  mov rdx,QWORD PTR [rbp-0x30]'],
+    ['pd56', '0x1178 <+56>:  mov rdi,QWORD PTR [rbp-0x30]'],
+    ['pd60', '0x117c <+60>:  lea rcx,[rip+0xebf] # 0x2042'],
+    ['pd67', '0x1183 <+67>:  lea rax,[rip+0xea0] # 0x202a'],
+    ['pd74', '0x118a <+74>:  cmp rdi,0x0'],
+    ['pd78', '0x118e <+78>:  cmovg rcx,rax'],
+    ['pd82', '0x1192 <+82>:  lea rdi,[rip+0xe6b] # 0x2004'],
+    ['pd89', '0x1199 <+89>:  mov al,0x0'],
+    ['pd91', '0x119b <+91>:  call 0x1030 <printf@plt>'],
+    ['pd96', '0x11a0 <+96>:  add rsp,0x30'],
+    ['pd100','0x11a4 <+100>: pop rbp'],
+    ['pd101','0x11a5 <+101>: ret'],
+    ['pd106','0x11a6:        cs nop WORD PTR [rax+rax*1+0x0]']
+  ],
+  b: [
+    ['b0',   '0x11b0 <+0>:   push rbp'],
+    ['b1',   '0x11b1 <+1>:   mov rbp,rsp'],
+    ['b4',   '0x11b4 <+4>:   sub rsp,0x10'],
+    ['b8',   '0x11b8 <+8>:   mov DWORD PTR [rbp-0x4],edi'],
+    ['b11',  '0x11bb <+11>:  mov DWORD PTR [rbp-0x8],0x1e'],
+    ['b18',  '0x11c2 <+18>:  mov eax,DWORD PTR [rbp-0x4]'],
+    ['b21',  '0x11c5 <+21>:  add eax,DWORD PTR [rbp-0x8]'],
+    ['b24',  '0x11c8 <+24>:  mov DWORD PTR [rbp-0xc],eax'],
+    ['b27',  '0x11cb <+27>:  lea rdi,[rip+0xe86] # 0x2058'],
+    ['b34',  '0x11d2 <+34>:  mov al,0x0'],
+    ['b36',  '0x11d4 <+36>:  call 0x1030 <printf@plt>'],
+    ['b41',  '0x11d9 <+41>:  mov edx,DWORD PTR [rbp-0x4]'],
+    ['b44',  '0x11dc <+44>:  lea rdi,[rip+0xe92] # 0x2075'],
+    ['b51',  '0x11e3 <+51>:  lea rsi,[rbp-0x4]'],
+    ['b55',  '0x11e7 <+55>:  mov al,0x0'],
+    ['b57',  '0x11e9 <+57>:  call 0x1030 <printf@plt>'],
+    ['b62',  '0x11ee <+62>:  mov edx,DWORD PTR [rbp-0x8]'],
+    ['b65',  '0x11f1 <+65>:  lea rdi,[rip+0xea3] # 0x209b'],
+    ['b72',  '0x11f8 <+72>:  lea rsi,[rbp-0x8]'],
+    ['b76',  '0x11fc <+76>:  mov al,0x0'],
+    ['b78',  '0x11fe <+78>:  call 0x1030 <printf@plt>'],
+    ['b83',  '0x1203 <+83>:  mov edx,DWORD PTR [rbp-0xc]'],
+    ['b86',  '0x1206 <+86>:  lea rdi,[rip+0xeb4] # 0x20c1'],
+    ['b93',  '0x120d <+93>:  lea rsi,[rbp-0xc]'],
+    ['b97',  '0x1211 <+97>:  mov al,0x0'],
+    ['b99',  '0x1213 <+99>:  call 0x1030 <printf@plt>'],
+    ['b104', '0x1218 <+104>: mov eax,DWORD PTR [rbp-0xc]'],
+    ['b107', '0x121b <+107>: add rsp,0x10'],
+    ['b111', '0x121f <+111>: pop rbp'],
+    ['b112', '0x1220 <+112>: ret'],
+    ['b121', '0x1221:        data16 data16 cs nop WORD PTR [rax+rax*1+0x0]']
+  ],
+  a: [
+    ['a0',   '0x1230 <+0>:   push rbp'],
+    ['a1',   '0x1231 <+1>:   mov rbp,rsp'],
+    ['a4',   '0x1234 <+4>:   sub rsp,0x60'],
+    ['a8',   '0x1238 <+8>:   mov DWORD PTR [rbp-0x4],edi'],
+    ['a11',  '0x123b <+11>:  mov DWORD PTR [rbp-0x8],0x14'],
+    ['a18',  '0x1242 <+18>:  lea rdi,[rip+0xe9f] # 0x20e8'],
+    ['a25',  '0x1249 <+25>:  mov al,0x0'],
+    ['a27',  '0x124b <+27>:  call 0x1030 <printf@plt>'],
+    ['a32',  '0x1250 <+32>:  mov edx,DWORD PTR [rbp-0x4]'],
+    ['a35',  '0x1253 <+35>:  lea rdi,[rip+0xeab] # 0x2105'],
+    ['a42',  '0x125a <+42>:  lea rsi,[rbp-0x4]'],
+    ['a46',  '0x125e <+46>:  mov al,0x0'],
+    ['a48',  '0x1260 <+48>:  call 0x1030 <printf@plt>'],
+    ['a53',  '0x1265 <+53>:  mov edx,DWORD PTR [rbp-0x8]'],
+    ['a56',  '0x1268 <+56>:  lea rdi,[rip+0xebc] # 0x212b'],
+    ['a63',  '0x126f <+63>:  lea rsi,[rbp-0x8]'],
+    ['a67',  '0x1273 <+67>:  mov al,0x0'],
+    ['a69',  '0x1275 <+69>:  call 0x1030 <printf@plt>'],
+    ['a74',  '0x127a <+74>:  lea rsi,[rbp-0x50]'],
+    ['a78',  '0x127e <+78>:  lea rdi,[rip+0xecc] # 0x2151'],
+    ['a85',  '0x1285 <+85>:  mov al,0x0'],
+    ['a87',  '0x1287 <+87>:  call 0x1030 <printf@plt>'],
+    ['a92',  '0x128c <+92>:  lea rdx,[rbp-0x50]'],
+    ['a96',  '0x1290 <+96>:  lea rdi,[rip+0xed4] # 0x216b'],
+    ['a103', '0x1297 <+103>: lea rsi,[rbp-0x8]'],
+    ['a107', '0x129b <+107>: call 0x1140 <print_distance>'],
+    ['a112', '0x12a0 <+112>: mov edi,DWORD PTR [rbp-0x4]'],
+    ['a115', '0x12a3 <+115>: add edi,0x5'],
+    ['a118', '0x12a6 <+118>: call 0x11b0 <function_b>'],
+    ['a123', '0x12ab <+123>: mov DWORD PTR [rbp-0x54],eax'],
+    ['a126', '0x12ae <+126>: lea rdi,[rip+0xed0] # 0x2185'],
+    ['a133', '0x12b5 <+133>: mov al,0x0'],
+    ['a135', '0x12b7 <+135>: call 0x1030 <printf@plt>'],
+    ['a140', '0x12bc <+140>: mov edx,DWORD PTR [rbp-0x54]'],
+    ['a143', '0x12bf <+143>: lea rdi,[rip+0xef9] # 0x21bf'],
+    ['a150', '0x12c6 <+150>: lea rsi,[rbp-0x54]'],
+    ['a154', '0x12ca <+154>: mov al,0x0'],
+    ['a156', '0x12cc <+156>: call 0x1030 <printf@plt>'],
+    ['a161', '0x12d1 <+161>: mov eax,DWORD PTR [rbp-0x8]'],
+    ['a164', '0x12d4 <+164>: add eax,DWORD PTR [rbp-0x54]'],
+    ['a167', '0x12d7 <+167>: add rsp,0x60'],
+    ['a171', '0x12db <+171>: pop rbp'],
+    ['a172', '0x12dc <+172>: ret'],
+    ['a173', '0x12dd:        nop DWORD PTR [rax]']
+  ],
+  c: [
+    ['c0',   '0x12e0 <+0>:   push rbp'],
+    ['c1',   '0x12e1 <+1>:   mov rbp,rsp'],
+    ['c4',   '0x12e4 <+4>:   sub rsp,0x10'],
+    ['c8',   '0x12e8 <+8>:   mov DWORD PTR [rbp-0x4],edi'],
+    ['c11',  '0x12eb <+11>:  mov DWORD PTR [rbp-0x8],0x3e7'],
+    ['c18',  '0x12f2 <+18>:  lea rdi,[rip+0xef7] # 0x21f0'],
+    ['c25',  '0x12f9 <+25>:  mov al,0x0'],
+    ['c27',  '0x12fb <+27>:  call 0x1030 <printf@plt>'],
+    ['c32',  '0x1300 <+32>:  mov edx,DWORD PTR [rbp-0x8]'],
+    ['c35',  '0x1303 <+35>:  lea rdi,[rip+0xf26] # 0x2230'],
+    ['c42',  '0x130a <+42>:  lea rsi,[rbp-0x8]'],
+    ['c46',  '0x130e <+46>:  mov al,0x0'],
+    ['c48',  '0x1310 <+48>:  call 0x1030 <printf@plt>'],
+    ['c53',  '0x1315 <+53>:  mov eax,DWORD PTR [rbp-0x8]'],
+    ['c56',  '0x1318 <+56>:  add eax,DWORD PTR [rbp-0x4]'],
+    ['c59',  '0x131b <+59>:  add rsp,0x10'],
+    ['c63',  '0x131f <+63>:  pop rbp'],
+    ['c64',  '0x1320 <+64>:  ret'],
+    ['c65',  '0x1321:        data16 data16 cs nop WORD PTR [rax+rax*1+0x0]']
+  ],
+  m: [
+    ['m0',   '0x1330 <+0>:   push rbp'],
+    ['m1',   '0x1331 <+1>:   mov rbp,rsp'],
+    ['m4',   '0x1334 <+4>:   sub rsp,0x10'],
+    ['m8',   '0x1338 <+8>:   mov DWORD PTR [rbp-0x4],0x0'],
+    ['m15',  '0x133f <+15>:  mov DWORD PTR [rbp-0x8],0xa'],
+    ['m22',  '0x1346 <+22>:  lea rdi,[rip+0xf0b] # 0x2258'],
+    ['m29',  '0x134d <+29>:  mov al,0x0'],
+    ['m31',  '0x134f <+31>:  call 0x1030 <printf@plt>'],
+    ['m36',  '0x1354 <+36>:  mov edx,DWORD PTR [rbp-0x8]'],
+    ['m39',  '0x1357 <+39>:  lea rdi,[rip+0xf11] # 0x226f'],
+    ['m46',  '0x135e <+46>:  lea rsi,[rbp-0x8]'],
+    ['m50',  '0x1362 <+50>:  mov al,0x0'],
+    ['m52',  '0x1364 <+52>:  call 0x1030 <printf@plt>'],
+    ['m57',  '0x1369 <+57>:  mov edi,0x64'],
+    ['m62',  '0x136e <+62>:  call 0x1230 <function_a>'],
+    ['m67',  '0x1373 <+67>:  mov DWORD PTR [rbp-0xc],eax'],
+    ['m70',  '0x1376 <+70>:  lea rdi,[rip+0xf1a] # 0x2297'],
+    ['m77',  '0x137d <+77>:  mov al,0x0'],
+    ['m79',  '0x137f <+79>:  call 0x1030 <printf@plt>'],
+    ['m84',  '0x1384 <+84>:  mov edx,DWORD PTR [rbp-0xc]'],
+    ['m87',  '0x1387 <+87>:  lea rdi,[rip+0xf3d] # 0x22cb'],
+    ['m94',  '0x138e <+94>:  lea rsi,[rbp-0xc]'],
+    ['m98',  '0x1392 <+98>:  mov al,0x0'],
+    ['m100', '0x1394 <+100>: call 0x1030 <printf@plt>'],
+    ['m105', '0x1399 <+105>: mov edi,DWORD PTR [rbp-0x8]'],
+    ['m108', '0x139c <+108>: call 0x12e0 <function_c>'],
+    ['m113', '0x13a1 <+113>: mov DWORD PTR [rbp-0x10],eax'],
+    ['m116', '0x13a4 <+116>: mov edx,DWORD PTR [rbp-0x10]'],
+    ['m119', '0x13a7 <+119>: lea rdi,[rip+0xf5e] # 0x230c'],
+    ['m126', '0x13ae <+126>: lea rsi,[rbp-0x10]'],
+    ['m130', '0x13b2 <+130>: mov al,0x0'],
+    ['m132', '0x13b4 <+132>: call 0x1030 <printf@plt>'],
+    ['m137', '0x13b9 <+137>: xor eax,eax'],
+    ['m139', '0x13bb <+139>: add rsp,0x10'],
+    ['m143', '0x13bf <+143>: pop rbp'],
+    ['m144', '0x13c0 <+144>: ret']
+  ]
+};
+
+const ADDR = [
+  '0x7ffffffde68', // 0: Return addr to OS
+  '0x7ffffffde60', // 1: Saved RBP (main frame anchor)
+  '0x7ffffffde5c', // 2: [rbp-0x4] (main return status = 0)
+  '0x7ffffffde58', // 3: [rbp-0x8] (main_local = 10)
+  '0x7ffffffde54', // 4: [rbp-0xc] (a_returned)
+  '0x7ffffffde50', // 5: [rbp-0x10] (c_returned)
+  '0x7ffffffde48', // 6: Return addr into main
+  '0x7ffffffde40', // 7: Saved RBP (function_a / function_c frame anchor)
+  '0x7ffffffde3c', // 8: [rbp-0x4] (a_param = 100 / c_param = 10)
+  '0x7ffffffde38', // 9: [rbp-0x8] (a_local = 20 / c_local = 999)
+  '0x7ffffffdff0', // 10: [rbp-0x50] (a_buffer[64] start)
+  '0x7ffffffdfec', // 11: [rbp-0x54] (b_returned = 135)
+  '0x7ffffffdfe0', // 12: [rbp-0x60] (function_a rsp alignment)
+  '0x7ffffffdfd8', // 13: Return addr into function_a
+  '0x7ffffffdfd0', // 14: Saved RBP (print_distance / function_b frame anchor)
+  '0x7ffffffdfcc', // 15: [rbp-0x4] (b_param = 105)
+  '0x7ffffffdfc8', // 16: [rbp-0x8] (b_local = 30 / label)
+  '0x7ffffffdfc4', // 17: [rbp-0xc] (b_result = 135 / addr1)
+  '0x7ffffffdfb8', // 18: [rbp-0x18] (addr2 = 0x7ffffffdf50)
+  '0x7ffffffdfa0'  // 19: [rbp-0x30] (diff = 72 bytes)
+];
+
+const N = ADDR.length;
+let status = Array(N).fill('future');
+let owner = Array(N).fill('none');
+let label = Array(N).fill('');
+let content = Array(N).fill('');
+let rbp = -1, rsp = -1;
+let S = [];
+
+function set(idx, lab, cont, own) {
+  label[idx] = lab;
+  content[idx] = cont;
+  owner[idx] = own;
+  status[idx] = 'active';
+}
+
+function reclaim(...idxs) {
+  idxs.forEach(k => status[k] = 'reclaimed');
+}
+
+function snap(c, fn, asmIds, note, raxVal = '0', rdiVal = '0', cat = '', action = '', details = '', takeaway = '') {
+  S.push({
+    c: Array.isArray(c) ? c : [c],
+    fn, asmIds, note,
+    status: status.slice(),
+    owner: owner.slice(),
+    label: label.slice(),
+    content: content.slice(),
+    rbp, rsp,
+    rax: raxVal,
+    rdi: rdiVal,
+    cat, action, details, takeaway
+  });
+}
+
+// -------------------------------------------------------------
+// LINE-BY-LINE STRICT SEQUENTIAL STEP GENERATION
+// -------------------------------------------------------------
+
+// --- MAIN START ---
+// Line 63: main() Prologue & Allocation
+set(0, 'Return Address', '← libc_start_main', 'none');
+set(1, 'Saved RBP', "OS Caller RBP", 'main');
+rbp = 1; rsp = 1;
+set(2, '[rbp-0x4]', '0', 'main');
+set(3, '[rbp-0x8]', '?', 'main');
+set(4, '[rbp-0xc]', '?', 'main');
+set(5, '[rbp-0x10]', '?', 'main');
+rsp = 5;
+snap(63, 'm', ['m0', 'm1', 'm4'], "main() begins: establishes frame pointer and allocates 16 bytes.", '0', '0',
+  'Function Entry', 'Entering main()', 'push rbp; mov rbp, rsp; sub rsp, 0x10', 'Functions start by creating their frame.');
+
+// Line 64: int main_local = 10;
+content[3] = '10 (0xa)';
+snap(64, 'm', ['m8', 'm15'], "int main_local = 10; initialized at offset [rbp-0x8].", '0', '0',
+  'Variable Initialization', 'Assigning main_local = 10', 'mov DWORD PTR [rbp-0x8], 0xa', 'Local variables are written into stack slots.');
+
+// Line 66: printf("=== Inside main() ===\n");
+snap(66, 'm', ['m22', 'm29', 'm31'], 'printf("=== Inside main() ===\\n");', '0', '0',
+  'Print Execution', 'Printing header string', 'lea rdi, [rip+...]; call printf@plt', 'String arguments pass in RDI register.');
+
+// Line 67 & 68: printf("Address of main_local: %p (Value: %d)\n\n", ...);
+snap([67, 68], 'm', ['m36', 'm39', 'm46', 'm50', 'm52'], "printf displaying address and value of main_local.", '0', '0',
+  'Print Execution', 'Printing &main_local and main_local value', 'lea rsi, [rbp-0x8]; mov edx, [rbp-0x8]; call printf@plt', 'Arguments passed via RDI, RSI, RDX.');
+
+// Line 71: calling function_a(100);
+set(6, 'Return Address', '0x1373 (in main)', 'none');
+rsp = 6;
+snap(71, 'm', ['m57', 'm62'], "Preparing argument 100 in EDI and calling function_a.", '0', '100 (0x64)',
+  'Function Call', 'Calling function_a(100)', 'mov edi, 0x64; call function_a', 'The call instruction pushes the return address onto the stack.');
+
+// --- FUNCTION_A START ---
+// Line 29: function_a prologue & allocation
+set(7, 'Saved RBP', "main's RBP (0x7ffffffde60)", 'a');
+rbp = 7; rsp = 7;
+set(8, '[rbp-0x4]', '?', 'a');
+set(9, '[rbp-0x8]', '?', 'a');
+set(10, '[rbp-0x50]..[rbp-0x10]', '?', 'a');
+set(11, '[rbp-0x54]', '?', 'a');
+set(12, '[rbp-0x60]', 'pad', 'a');
+rsp = 12;
+snap(29, 'a', ['a0', 'a1', 'a4'], "function_a frame creation: sub rsp, 0x60 reserves 96 bytes.", '0', '100',
+  'Child Function Entry', 'Entering function_a', 'push rbp; mov rbp, rsp; sub rsp, 0x60', 'Frame created by subtracting from RSP.');
+
+// Line 30: int a_local = 20;
+content[8] = '100 (a_param)';
+content[9] = '20 (a_local)';
+snap(30, 'a', ['a8', 'a11'], "a_param (100) placed at [rbp-0x4], a_local (20) placed at [rbp-0x8].", '0', '100',
+  'Variable Initialization', 'Assigning a_param and a_local', 'mov [rbp-0x4], edi; mov [rbp-0x8], 0x14', 'Parameters and locals stored in stack offsets.');
+
+// Line 31: char a_buffer[64];
+content[10] = 'a_buffer[64] (64 bytes)';
+snap(31, 'a', ['a4'], "char a_buffer[64] space reserved on stack [rbp-0x50]..[rbp-0x10].", '0', '100',
+  'Array Space Carving', 'Reserving 64-byte array on stack', 'Stack space allocated within frame', 'Local arrays reside directly in stack memory.');
+
+// Line 33: printf("=== Inside function_a() ===\n");
+snap(33, 'a', ['a18', 'a25', 'a27'], 'printf("=== Inside function_a() ===\\n");', '0', '100',
+  'Print Execution', 'Printing header string', 'lea rdi, [rip+...]; call printf@plt', 'Printing progress in function_a.');
+
+// Line 34: printf("Address of a_param...");
+snap(34, 'a', ['a32', 'a35', 'a42', 'a46', 'a48'], "printf displaying address and value of a_param.", '0', '100',
+  'Print Execution', 'Printing &a_param', 'lea rsi, [rbp-0x4]; call printf@plt', 'Inspecting parameter address.');
+
+// Line 35: printf("Address of a_local...");
+snap(35, 'a', ['a53', 'a56', 'a63', 'a67', 'a69'], "printf displaying address and value of a_local.", '0', '100',
+  'Print Execution', 'Printing &a_local', 'lea rsi, [rbp-0x8]; call printf@plt', 'Inspecting local variable address.');
+
+// Line 36: printf("Address of a_buffer...");
+snap(36, 'a', ['a74', 'a78', 'a85', 'a87'], "printf displaying base address of a_buffer.", '0', '100',
+  'Print Execution', 'Printing &a_buffer', 'lea rsi, [rbp-0x50]; call printf@plt', 'LEI computes array start offset.');
+
+// Line 39: print_distance("a_local to a_buffer space", &a_local, a_buffer);
+set(13, 'Return Address', '0x12a0 (in function_a)', 'none');
+rsp = 13;
+snap(39, 'a', ['a92', 'a96', 'a103', 'a107'], "Calling print_distance(&a_local, a_buffer).", '0', '100',
+  'Function Call', 'Calling print_distance helper', 'lea rdx, [rbp-0x50]; call print_distance', 'Pushes return address 0x12a0 onto stack.');
+
+// --- PRINT_DISTANCE START ---
+// Line 5: void print_distance(...) prologue
+set(14, 'Saved RBP', "function_a RBP (0x7ffffffde40)", 'pd');
+rbp = 14; rsp = 14;
+set(15, '[rbp-0x8]', '?', 'pd');
+set(16, '[rbp-0x10]', '?', 'pd');
+set(17, '[rbp-0x18]', '?', 'pd');
+set(18, '[rbp-0x20]', '?', 'pd');
+set(19, '[rbp-0x28]', '?', 'pd');
+rsp = 19;
+snap(5, 'pd', ['pd0', 'pd1', 'pd4'], "print_distance frame created (sub rsp, 0x30).", '0', '100',
+  'Helper Entry', 'Entering print_distance', 'push rbp; mov rbp, rsp; sub rsp, 0x30', 'Dedicated frame for calculation.');
+
+// Line 6: uintptr_t a1 = (uintptr_t)addr1;
+content[15] = 'label ptr';
+content[16] = '0x...de38 (&a_local)';
+snap(6, 'pd', ['pd8', 'pd12', 'pd20', 'pd24'], "a1 initialized with &a_local (0x...de38).", '0', '100',
+  'Pointer Store', 'Assigning a1 = addr1', 'mov [rbp-0x10], rsi', 'Converting pointer to scalar integer address.');
+
+// Line 7: uintptr_t a2 = (uintptr_t)addr2;
+content[17] = '0x...dff0 (a_buffer)';
+snap(7, 'pd', ['pd16', 'pd28', 'pd32'], "a2 initialized with a_buffer (0x...dff0).", '0', '100',
+  'Pointer Store', 'Assigning a2 = addr2', 'mov [rbp-0x18], rdx', 'Storing buffer address.');
+
+// Line 8: long diff = (long)(a1 - a2);
+content[18] = 'diff = 72 (0x48)';
+snap(8, 'pd', ['pd36', 'pd40', 'pd44'], "Computing diff = a1 - a2 = +72 bytes.", '72 (0x48)', '100',
+  'Address Arithmetic', 'Calculating a1 - a2', 'sub rax, [rbp-0x28]', 'Positive offset proves downward stack growth.');
+
+// Line 9 & 10: printf(" [Offset]...");
+snap([9, 10], 'pd', ['pd48', 'pd52', 'pd56', 'pd60', 'pd67', 'pd74', 'pd78', 'pd82', 'pd89', 'pd91'], "Printing distance and stack growth direction.", '72 (0x48)', '100',
+  'Print Execution', 'Printing diff result', 'call printf@plt', 'Outputs byte separation to console.');
+
+// Line 11: print_distance return / epilogue
+reclaim(13, 14, 15, 16, 17, 18, 19);
+rbp = 7; rsp = 12;
+snap(11, 'pd', ['pd96', 'pd100', 'pd101'], "print_distance frame popped (add rsp, 0x30; pop rbp; ret).", '72 (0x48)', '100',
+  'Epilogue', 'Returning from print_distance', 'add rsp, 0x30; pop rbp; ret', 'Frame destroyed.');
+
+// --- BACK IN FUNCTION_A ---
+// Line 42: int b_returned = function_b(a_param + 5);
+set(13, 'Return Address', '0x12ab (in function_a)', 'none');
+rsp = 13;
+snap(42, 'a', ['a112', 'a115', 'a118'], "Preparing argument (100 + 5 = 105) in EDI and calling function_b.", '0', '105 (0x69)',
+  'Function Call', 'Calling function_b(105)', 'add edi, 0x5; call function_b', 'Evaluates argument before jumping.');
+
+// --- FUNCTION_B START ---
+// Line 14: int function_b(int b_param) prologue
+set(14, 'Saved RBP', "function_a RBP (0x7ffffffde40)", 'b');
+rbp = 14; rsp = 14;
+set(15, '[rbp-0x4]', '?', 'b');
+set(16, '[rbp-0x8]', '?', 'b');
+set(17, '[rbp-0xc]', '?', 'b');
+rsp = 17;
+snap(14, 'b', ['b0', 'b1', 'b4'], "function_b frame created (sub rsp, 0x10), reusing freed stack memory address!", '0', '105',
+  'Memory Reuse Entry', 'Entering function_b', 'push rbp; mov rbp, rsp; sub rsp, 0x10', 'Reuses stack memory previously released.');
+
+// Line 15: int b_local = 30;
+content[15] = '105 (b_param)';
+content[16] = '30 (b_local)';
+snap(15, 'b', ['b8', 'b11'], "b_param (105) saved at [rbp-0x4], b_local (30) written at [rbp-0x8].", '0', '105',
+  'Variable Initialization', 'Assigning b_local = 30', 'mov DWORD PTR [rbp-0x8], 0x1e', 'Local variables stored in stack slots.');
+
+// Line 16: int b_result = b_param + b_local;
+content[17] = '135 (b_result)';
+snap(16, 'b', ['b18', 'b21', 'b24'], "b_result = 105 + 30 = 135 stored in [rbp-0xc].", '135 (0x87)', '105',
+  'Arithmetic Calculation', 'Computing b_result = 105 + 30', 'add eax, [rbp-0x8]', 'Result computed into EAX register.');
+
+// Line 18: printf("=== Inside function_b() ===\n");
+snap(18, 'b', ['b27', 'b34', 'b36'], 'printf("=== Inside function_b() ===\\n");', '135', '105',
+  'Print Execution', 'Printing header string', 'call printf@plt', 'Console output.');
+
+// Line 19: printf("Address of b_param...");
+snap(19, 'b', ['b41', 'b44', 'b51', 'b55', 'b57'], "printf displaying address and value of b_param.", '135', '105',
+  'Print Execution', 'Printing &b_param', 'call printf@plt', 'Displays parameter details.');
+
+// Line 20: printf("Address of b_local...");
+snap(20, 'b', ['b62', 'b65', 'b72', 'b76', 'b78'], "printf displaying address and value of b_local.", '135', '105',
+  'Print Execution', 'Printing &b_local', 'call printf@plt', 'Displays local variable address.');
+
+// Line 21 & 22: printf("Address of b_result...");
+snap([21, 22], 'b', ['b83', 'b86', 'b93', 'b97', 'b99'], "printf displaying address and value of b_result.", '135', '105',
+  'Print Execution', 'Printing &b_result', 'call printf@plt', 'Displays result details.');
+
+// Line 25: return b_result;
+reclaim(13, 14, 15, 16, 17);
+rbp = 7; rsp = 12;
+snap(25, 'b', ['b104', 'b107', 'b111', 'b112'], "return b_result; loads 135 into RAX and pops frame.", '135', '105',
+  'Return Statement', 'Returning 135 from function_b', 'mov eax, [rbp-0xc]; ret', 'Return value passed in RAX.');
+
+// --- BACK IN FUNCTION_A ---
+// Line 42 (Capture): int b_returned = ...
+content[11] = '135 (b_returned)';
+snap(42, 'a', ['a123'], "b_returned captured from RAX (135) into stack slot [rbp-0x54].", '135', '105',
+  'Return Capture', 'Storing return value into b_returned', 'mov [rbp-0x54], eax', 'Caller extracts return value from RAX.');
+
+// Line 44: printf("=== Back in function_a() ...\n");
+snap(44, 'a', ['a126', 'a133', 'a135'], 'printf("=== Back in function_a() (after function_b returned) ===\\n");', '135', '105',
+  'Print Execution', 'Printing return status header', 'call printf@plt', 'Execution resumed in function_a.');
+
+// Line 45 & 46: printf("Address of b_returned...");
+snap([45, 46], 'a', ['a140', 'a143', 'a150', 'a154', 'a156'], "printf displaying address and value of b_returned.", '135', '105',
+  'Print Execution', 'Printing &b_returned', 'call printf@plt', 'Prints value 135.');
+
+// Line 49: return a_local + b_returned;
+snap(49, 'a', ['a161', 'a164'], "Computing return value: a_local (20) + b_returned (135) = 155 in RAX.", '155 (0x9b)', '105',
+  'Return Calculation', 'Computing 20 + 135 = 155', 'add eax, [rbp-0x54]', 'Prepares final return value in RAX.');
+
+// Line 49 (Epilogue): function_a epilogue
+reclaim(6, 7, 8, 9, 10, 11, 12);
+rbp = 1; rsp = 5;
+snap(49, 'a', ['a167', 'a171', 'a172'], "function_a frame dissolved (add rsp, 0x60; pop rbp; ret).", '155', '105',
+  'Epilogue', 'Returning from function_a to main', 'add rsp, 0x60; pop rbp; ret', 'Stack pointer RSP moves back up.');
+
+// --- BACK IN MAIN ---
+// Line 71 (Capture): int a_returned = ...
+content[4] = '155 (a_returned)';
+snap(71, 'm', ['m67'], "a_returned captured from RAX (155) into main slot [rbp-0xc].", '155', '105',
+  'Return Capture', 'Storing return value into a_returned', 'mov [rbp-0xc], eax', 'Main receives 155.');
+
+// Line 73: printf("=== Back in main() ...\n");
+snap(73, 'm', ['m70', 'm77', 'm79'], 'printf("=== Back in main() (after function_a returned) ===\\n");', '155', '105',
+  'Print Execution', 'Printing return status header', 'call printf@plt', 'Resumed execution in main.');
+
+// Line 74 & 75: printf("Address of a_returned...");
+snap([74, 75], 'm', ['m84', 'm87', 'm94', 'm98', 'm100'], "printf displaying address and value of a_returned.", '155', '105',
+  'Print Execution', 'Printing &a_returned', 'call printf@plt', 'Displays value 155.');
+
+// Line 78: calling function_c(main_local);
+set(6, 'Return Address', '0x13a1 (in main)', 'none');
+rsp = 6;
+snap(78, 'm', ['m105', 'm108'], "Preparing argument main_local (10) in EDI and calling function_c (Sibling call).", '155', '10 (0xa)',
+  'Sibling Call', 'Calling function_c(10)', 'mov edi, [rbp-0x8]; call function_c', 'Sibling function call.');
+
+// --- FUNCTION_C START ---
+// Line 53: int function_c(int c_param) prologue
+set(7, 'Saved RBP', "main's RBP (0x7ffffffde60)", 'c');
+rbp = 7; rsp = 7;
+set(8, '[rbp-0x4]', '?', 'c');
+set(9, '[rbp-0x8]', '?', 'c');
+rsp = 9;
+snap(53, 'c', ['c0', 'c1', 'c4'], "function_c frame created, reusing exact same memory space previously used by function_a!", '155', '10',
+  'Memory Overwrite Entry', 'Entering function_c', 'push rbp; mov rbp, rsp; sub rsp, 0x10', 'Stack memory recycling.');
+
+// Line 54: int c_local = 999;
+content[8] = '10 (c_param)';
+content[9] = '999 (c_local)';
+snap(54, 'c', ['c8', 'c11'], "c_param (10) saved at [rbp-0x4], c_local (999) written at [rbp-0x8].", '155', '10',
+  'Variable Store', 'Assigning c_local = 999', 'mov DWORD PTR [rbp-0x8], 0x3e7', 'Overwrites stale data from function_a.');
+
+// Line 56: printf("=== Inside function_c() ...\n");
+snap(56, 'c', ['c18', 'c25', 'c27'], 'printf("=== Inside function_c() (Called after function_a returned) ===\\n");', '155', '10',
+  'Print Execution', 'Printing header string', 'call printf@plt', 'Console output.');
+
+// Line 57 & 58: printf("Address of c_local...");
+snap([57, 58], 'c', ['c32', 'c35', 'c42', 'c46', 'c48'], "printf displaying address and value of c_local.", '155', '10',
+  'Print Execution', 'Printing &c_local', 'call printf@plt', 'Confirms memory address reuse.');
+
+// Line 60: return c_local + c_param;
+snap(60, 'c', ['c53', 'c56'], "Computing return value: c_local (999) + c_param (10) = 1009 in RAX.", '1009 (0x3f1)', '10',
+  'Return Calculation', 'Computing 999 + 10 = 1009', 'add eax, [rbp-0x4]', 'Result computed into RAX.');
+
+// Line 60 (Epilogue): function_c epilogue
+reclaim(6, 7, 8, 9);
+rbp = 1; rsp = 5;
+snap(60, 'c', ['c59', 'c63', 'c64'], "function_c frame popped, returning to main.", '1009', '10',
+  'Epilogue', 'Returning from function_c', 'add rsp, 0x10; pop rbp; ret', 'Frame destroyed.');
+
+// --- BACK IN MAIN ---
+// Line 78 (Capture): int c_returned = ...
+content[5] = '1009 (c_returned)';
+snap(78, 'm', ['m113'], "c_returned captured from RAX (1009) into main slot [rbp-0x10].", '1009', '10',
+  'Return Capture', 'Storing return value into c_returned', 'mov [rbp-0x10], eax', 'Main receives 1009.');
+
+// Line 80 & 81: printf("Address of c_returned...");
+snap([80, 81], 'm', ['m116', 'm119', 'm126', 'm130', 'm132'], "printf displaying address and value of c_returned.", '1009', '10',
+  'Print Execution', 'Printing &c_returned', 'call printf@plt', 'Prints value 1009.');
+
+// Line 83: return 0;
+reclaim(0, 1, 2, 3, 4, 5);
+rbp = -1; rsp = -1;
+snap(83, 'm', ['m137', 'm139', 'm143', 'm144'], "main returns 0. All stack frames cleaned up!", '0', '0',
+  'Program Complete', 'Exiting main() with code 0', 'xor eax, eax; add rsp, 0x10; pop rbp; ret', 'Full stack cleanup completed.');
+
+let curStep = 0;
+let timer = null;
+
+function highlightC(lineText) {
+  let text = escapeHtml(lineText);
+  text = text.replace(/\b(void|int|char|long|const|uintptr_t|return)\b/g, '<span class="c-kw">$1</span>');
+  text = text.replace(/\b(print_distance|function_a|function_b|function_c|main|printf)\b(?=\()/g, '<span class="c-fn">$1</span>');
+  text = text.replace(/(&quot;.*?&quot;)/g, '<span class="c-str">$1</span>');
+  text = text.replace(/(\/\/.*)/g, '<span class="c-cm">$1</span>');
+  text = text.replace(/\b(\d+)\b/g, '<span class="c-num">$1</span>');
+  return text;
+}
+
+function highlightAsm(lineText) {
+  let text = escapeHtml(lineText);
+  text = text.replace(/\b(push|pop|mov|sub|add|call|ret|lea|cmovg|xor|cmp)\b/g, '<span class="asm-op">$1</span>');
+  text = text.replace(/\b(rbp|rsp|rax|rdi|rsi|rdx|rcx|al|eax|edi|edx|DWORD|QWORD|PTR|WORD)\b/g, '<span class="asm-reg">$1</span>');
+  text = text.replace(/(0x[0-9a-fA-F]+)/g, '<span class="asm-hex">$1</span>');
+  text = text.replace(/(&lt;.*?&gt;)/g, '<span class="asm-lbl">$1</span>');
+  return text;
+}
+
+function render() {
+  document.getElementById('ctr').textContent = `Step ${curStep + 1} / ${S.length}`;
+  document.getElementById('slider').max = S.length - 1;
+  document.getElementById('slider').value = curStep;
+
+  const s = S[curStep];
+  document.getElementById('note').textContent = s.note;
+
+  // Update Explanation Card
+  document.getElementById('exp-cat').textContent = s.cat || 'Execution Step';
+  document.getElementById('exp-action').textContent = s.action || s.note;
+  document.getElementById('exp-details').textContent = s.details || 'Executing instruction...';
+  document.getElementById('exp-takeaway').textContent = s.takeaway || 'Observe dynamic memory stack pointer shifts.';
+
+  // Registers update
+  document.getElementById('reg-rsp').textContent = s.rsp >= 0 ? ADDR[s.rsp] : '0x...de68';
+  document.getElementById('reg-rbp').textContent = s.rbp >= 0 ? ADDR[s.rbp] : '0x...de68';
+  document.getElementById('reg-rax').textContent = s.rax;
+  document.getElementById('reg-rdi').textContent = s.rdi;
+
+  // Assembly line preview
+  document.getElementById('asmline').textContent = s.asmIds.map(id => {
+    for (const k in A) {
+      const f = A[k].find(x => x[0] === id);
+      if (f) return f[1];
+    }
+    return id;
+  }).join('   |   ');
+
+  // Render C Source Panel
+  const cp = document.getElementById('cpanel');
+  cp.innerHTML = '';
+  C.forEach(([ln, text]) => {
+    const div = document.createElement('div');
+    div.className = 'ln' + (s.c.includes(ln) ? ' hit' : '');
+    div.innerHTML = `<span class="no">${ln}</span><span>${highlightC(text)}</span>`;
+    cp.appendChild(div);
+  });
+
+  // Render Assembly Panel
+  const ap = document.getElementById('apanel');
+  ap.innerHTML = '';
+  [['print_distance', 'pd'], ['function_b', 'b'], ['function_a', 'a'], ['function_c', 'c'], ['main', 'm']].forEach(([lbl, key]) => {
+    const l = document.createElement('div');
+    l.className = 'fnlabel' + (s.fn !== key ? ' dim' : '');
+    l.textContent = lbl + ':';
+    ap.appendChild(l);
+
+    A[key].forEach(([id, text]) => {
+      const div = document.createElement('div');
+      let cls = 'ln' + (s.asmIds.includes(id) ? ' hit' : '');
+      if (s.fn !== key) cls += ' dim';
+      div.className = cls;
+      div.innerHTML = `<span class="no">${id.replace(/^[a-z]+/, '')}</span><span>${highlightAsm(text)}</span>`;
+      ap.appendChild(div);
+    });
+  });
+
+  // Render Memory Stack Column
+  const col = document.getElementById('stackcol');
+  col.innerHTML = '';
+  for (let idx = 0; idx < N; idx++) {
+    const div = document.createElement('div');
+    let cls = 'row frame-' + (s.owner[idx] || 'none');
+    if (s.status[idx] === 'future') cls += ' future';
+    else if (s.status[idx] === 'reclaimed') cls += ' reclaimed';
+    div.className = cls;
+
+    let ptrs = '';
+    if (idx === s.rbp) ptrs += '<span class="pill" style="background:#0284c7;">rbp →</span>';
+    if (idx === s.rsp) ptrs += '<span class="pill" style="background:#e11d48;">rsp →</span>';
+
+    div.innerHTML = `
+      <span class="addr">${ADDR[idx]}</span>
+      <span>
+        <span class="label">${escapeHtml(s.label[idx] || '')}</span>
+        <span class="content">${escapeHtml(s.content[idx] || '')}</span>
+      </span>
+      <span class="ptrs">${ptrs}</span>
+    `;
+    col.appendChild(div);
+  }
+
+  // Auto-scroll highlighted code into view
+  const cHit = cp.querySelector('.hit');
+  if (cHit) cHit.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+  const aHit = ap.querySelector('.hit');
+  if (aHit) aHit.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function togglePlay() {
+  const playBtn = document.getElementById('play');
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+    playBtn.textContent = '▶ Play';
+  } else {
+    playBtn.textContent = '⏸ Pause';
+    timer = setInterval(() => {
+      if (curStep < S.length - 1) {
+        curStep++;
+        render();
+      } else {
+        togglePlay();
+      }
+    }, 2000);
+  }
+}
+
+document.getElementById('next').onclick = () => {
+  curStep = Math.min(curStep + 1, S.length - 1);
+  render();
+};
+
+document.getElementById('prev').onclick = () => {
+  curStep = Math.max(curStep - 1, 0);
+  render();
+};
+
+document.getElementById('slider').oninput = (e) => {
+  curStep = parseInt(e.target.value, 10);
+  render();
+};
+
+document.getElementById('play').onclick = togglePlay;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') {
+    curStep = Math.min(curStep + 1, S.length - 1);
+    render();
+  } else if (e.key === 'ArrowLeft') {
+    curStep = Math.max(curStep - 1, 0);
+    render();
+  } else if (e.key === ' ') {
+    e.preventDefault();
+    togglePlay();
+  }
+});
+
+// Initial Render
+render();
+</script>
+</body>
+</html>
