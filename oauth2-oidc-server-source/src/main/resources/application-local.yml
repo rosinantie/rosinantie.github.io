@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: new-app
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/new_app
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+server:
+  port: 9600
+  # No context-path here on purpose: OIDC well-known discovery paths
+  # (/.well-known/openid-configuration, /oauth2/jwks, /oauth2/token, ...)
+  # are expected at the issuer root by every off-the-shelf OIDC client.
+
+app:
+  # Issuer must exactly match what clients use to reach this server (host+port).
+  issuer: http://localhost:9600
+
+  security:
+    max-failed-logins: 5
+    lockout-duration-minutes: 15
+
+  oauth2:
+    clients:
+      - client-id: demo-public-client
+        client-secret: ""
+        public-client: true
+        redirect-uris:
+          - http://127.0.0.1:5173/callback
+          - http://127.0.0.1:9600/authorized
+        post-logout-redirect-uris:
+          - http://127.0.0.1:5173/
+      - client-id: postman-test-client
+        # Raw secret here; AuthorizationServerConfig BCrypt-encodes it before registering the client.
+        client-secret: "postman-secret-change-me"
+        public-client: false
+        redirect-uris:
+          - https://oauth.pstmn.io/v1/callback
+        post-logout-redirect-uris: []
+
+  google-login:
+    # Google is OPTIONAL: if either value below is blank, the app starts normally
+    # with Google login simply disabled (no "Continue with Google" button, and
+    # /oauth2/authorization/google returns 404) - it never breaks startup.
+    #
+    # To enable: create an OAuth client at https://console.cloud.google.com/apis/credentials
+    # (type "Web application"), authorized redirect URI:
+    #   http://localhost:9600/login/oauth2/code/google
+    # then export the two values as env vars rather than hardcoding them here.
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    com.example.newapp: DEBUG

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Sign in</title>
+</head>
+<body>
+<h2>Sign in</h2>
+
+<p th:if="${param.error}">Invalid username or password.</p>
+<p th:if="${param.logout}">You have been signed out.</p>
+<p th:if="${param.registered}">Account created. Please sign in.</p>
+
+<form method="post" th:action="@{/login}">
+    <input type="text" name="username" placeholder="Username" required autofocus/>
+    <input type="password" name="password" placeholder="Password" required/>
+    <button type="submit">Sign in</button>
+</form>
+
+<div th:if="${googleLoginEnabled}">
+    <p>or</p>
+    <a th:href="@{/oauth2/authorization/google}">Continue with Google</a>
+</div>
+
+<p><a th:href="@{/register}">Create an account</a></p>
+</body>
+</html>
